@@ -3,7 +3,7 @@
     <div class="d-flex flex-row">
       <!-- TABS LATERAIS -->
 
-      <v-tabs v-model="audit" color="#212b59" direction="vertical">
+      <v-tabs v-model="audit" :color="prometeon" direction="vertical">
         <v-tab
           v-for="n in audits"
           :key="n.mpDate ? n.mpDate : n.prevDate"
@@ -15,10 +15,10 @@
           ><v-col class="text-center"
             ><v-btn
               variant="text"
-              @click="openBox()"
+              @click="openBoxAudit()"
               icon="mdi-plus"
               class="text-center"
-              color="#212b59"
+              :color="prometeon"
             >
             </v-btn></v-col
         ></v-row>
@@ -42,7 +42,7 @@
 
             <v-stepper-item
               :complete="stepper > 1 ? true : false"
-              :color="stepper > 1 ? 'green' : ''"
+              :color="stepper > 1 ? (reportFinished ? 'green' : '') : ''"
               title="Aguardando o relatório"
               :value="1"
             ></v-stepper-item>
@@ -109,29 +109,45 @@
                             type="date"
                             value-format="dd/MM/yyyy"
                             size="large"
-                            clearable
+                            :disabled="pickerDisable[d['value'] + type.value]"
                             placeholder="Selecione uma data" /></v-col
                       ></v-row>
                     </v-col>
                   </v-row>
                 </v-col>
                 <v-col class="text-center"
-                  ><v-btn
-                    color="orange"
-                    class="mr-3"
-                    @click="reprogram()"
-                    :disabled="audit.prevDate == auditDates.prevDate"
-                    >Reprogramar</v-btn
-                  ><v-btn
-                    color="green"
-                    class="ml-3"
-                    :disabled="
-                      !auditDates.effectiveDate ||
-                      audit.effectiveDate == auditDates.effectiveDate
-                    "
-                    @click="finishAudit()"
-                    >Concluir</v-btn
-                  ></v-col
+                  ><div v-if="!btnSave && !audit.effectiveDate">
+                    <v-btn
+                      color="orange"
+                      class="mr-3"
+                      @click="alternableBtn('reprogram')"
+                      >Reprogramar</v-btn
+                    ><v-btn
+                      color="green"
+                      class="ml-3"
+                      @click="alternableBtn('finishAudit')"
+                      >Concluir</v-btn
+                    >
+                  </div>
+                  <div v-if="btnSave && !audit.effectiveDate">
+                    <v-btn
+                      color="green"
+                      class="mr-3"
+                      :disabled="
+                        (auditDates.prevDate == audit.prevDate &&
+                          btnSaveDict.call == 'reprogram') ||
+                        (auditDates.effectiveDate == null &&
+                          btnSaveDict.call == 'finishAudit')
+                      "
+                      @click="alternableBtn('save')"
+                      >Salvar</v-btn
+                    ><v-btn
+                      color="red"
+                      class="ml-3"
+                      @click="alternableBtn('cancel')"
+                      >Cancelar</v-btn
+                    >
+                  </div></v-col
                 ></v-row
               ></v-col
             >
@@ -140,7 +156,7 @@
           <v-card elevation="4">
             <!-- TABS RELATÓRIO E NÃO CONFORMIDADES -->
 
-            <v-tabs v-model="tabAuditView" bg-color="#212b59" grow>
+            <v-tabs v-model="tabAuditView" :bg-color="prometeon" grow>
               <v-tab v-for="n in tabContent" :key="n" :value="n.value">
                 {{ n.name }}
               </v-tab>
@@ -205,7 +221,12 @@
                       ></v-icon
                     ></v-col>
                     <v-col cols="12" class="text-center"
-                      ><v-btn color="green" @click="reportSubmitted()"
+                      ><v-btn
+                        color="green"
+                        :disabled="
+                          !this.audit.effectiveDate || this.reportFinished
+                        "
+                        @click="reportSubmitted()"
                         >Entregar relatório</v-btn
                       ></v-col
                     ></v-row
@@ -220,8 +241,9 @@
                   ><v-col class="text-end"
                     ><v-btn
                       :color="btnNewCompliance.color"
+                      :disabled="!this.reportFinished"
                       width="200"
-                      @click="newCompliance()"
+                      @click="OpenBoxCompliance()"
                       >{{ btnNewCompliance.text }}</v-btn
                     ></v-col
                   ></v-row
@@ -244,40 +266,142 @@
                 ></v-row>
 
                 <!-- TIMELINE -->
+                <div
+                  v-if="rowCompliance"
+                  class="d-flex flex-column justify-center align-center"
+                >
+                  <v-card variant="tonal" width="50vw" class="my-3">
+                    <v-card-title class="text-center">Descrição</v-card-title>
+                    <v-row justify="center" class="pa-3"
+                      ><v-col class="text-center"
+                        ><v-divider class="mb-2"></v-divider
+                        >{{
+                          dataCompliance[rowCompliance - 1].description
+                        }}</v-col
+                      ></v-row
+                    >
+                  </v-card>
 
-                <v-timeline align="start" v-if="rowCompliance">
-                  <v-timeline-item
-                    v-for="(item, i) in timelineItems"
-                    :key="i"
-                    dot-color="#212b59"
-                    :icon="item.icon"
-                    fill-dot
-                  >
-                    <!-- CONTEUDO TIMELINE DE CADA ITEM -->
+                  <v-timeline align="start">
+                    <v-timeline-item
+                      v-for="(item, i) in timelineItems"
+                      :key="i"
+                      :dot-color="i < stepCompliance ? 'green' : prometeon"
+                      :icon="item.icon"
+                      width="450"
+                      fill-dot
+                    >
+                      <!-- CONTEUDO TIMELINE DE CADA ITEM -->
 
-                    <v-card>
-                      <v-card
-                        rounded="0"
-                        :class="['text-h6', 'timeline', 'text-center', 'pa-2']"
-                      >
-                        {{ item.title }}
+                      <v-card elevation="8" :disabled="!(i <= stepCompliance)">
+                        <v-card
+                          rounded="0"
+                          :class="[
+                            'text-h6',
+                            'timeline',
+                            'text-center',
+                            'pa-2',
+                          ]"
+                        >
+                          {{ item.title }}
+                        </v-card>
+                        <v-card-text class="bg-white text--primary text-center">
+                          <v-row v-if="i !== 2"
+                            ><v-col
+                              cols="12"
+                              class="text-center"
+                              v-for="picker in [
+                                {
+                                  title: 'Master Plan',
+                                  value: 'MP',
+                                },
+                                {
+                                  title: 'Previsão',
+                                  value: 'Prev',
+                                },
+                                {
+                                  title: 'Efetiva',
+                                  value: 'Eff',
+                                },
+                              ]"
+                            >
+                              <div
+                                v-if="
+                                  !(picker.title == 'Master Plan' && i == 0)
+                                "
+                              >
+                                <div class="text-overline">
+                                  {{ picker.title }}
+                                </div>
+                                <n-date-picker
+                                  type="date"
+                                  placeholder="Selecione uma Data"
+                                  value-format="dd/MM/yyyy"
+                                  v-model:formatted-value="
+                                    complianceDates[
+                                      item['value'] + picker.value
+                                    ]
+                                  "
+                                  class="text-center date__picker"
+                                />
+                              </div>
+                              <div
+                                v-else
+                                class="card__plan bg-indigo-lighten-5"
+                              >
+                                <v-card-title> Agendado </v-card-title>
+                                <v-divider class="mx-6"></v-divider>
+                                <v-row justify="center"
+                                  ><v-col class="text-center text-h6 my-3">{{
+                                    dataCompliance[rowCompliance - 1].actionPlan
+                                  }}</v-col></v-row
+                                >
+                              </div>
+                            </v-col></v-row
+                          >
+
+                          <v-row justify="center" v-if="i == 2"
+                            ><v-col class="text-center">
+                              <v-banner
+                                lines="one"
+                                icon="mdi-send-check"
+                                color="green"
+                                class="my-4"
+                              >
+                                <v-banner-text> Aguardando... </v-banner-text>
+
+                                <template v-slot:actions>
+                                  <v-btn
+                                    variant="outlined"
+                                    @click="stepCompliance++"
+                                    >Entregar</v-btn
+                                  >
+                                </template>
+                              </v-banner>
+                            </v-col></v-row
+                          >
+                          <v-btn
+                            v-if="i != 2"
+                            :color="prometeon"
+                            variant="outlined"
+                            width="100"
+                            class="mt-2"
+                            @click="stepCompliance++"
+                          >
+                            Ok
+                          </v-btn>
+                        </v-card-text>
                       </v-card>
-                      <v-card-text class="bg-white text--primary">
-                        <p>...</p>
-                        <v-btn color="item.color" variant="outlined">
-                          Ok
-                        </v-btn>
-                      </v-card-text>
-                    </v-card>
-                  </v-timeline-item>
-                </v-timeline>
+                    </v-timeline-item>
+                  </v-timeline>
+                </div>
 
                 <!-- COMMENTS -->
                 <v-row justify="center"
                   ><v-divider
                     :thickness="2"
                     class="mt-4 mx-8"
-                    color="#212b59"
+                    :color="prometeon"
                   ></v-divider
                   ><v-col class="text-center ma-3"
                     ><v-btn
@@ -290,8 +414,8 @@
                     >
                     <n-drawer
                       v-model:show="showDrawer"
-                      :width="600"
-                      height="500"
+                      :width="500"
+                      :height="200"
                     >
                       <n-drawer-content
                         title="Comentários"
@@ -299,7 +423,8 @@
                         closable
                         trigger="none"
                       >
-                        <n-grid :y-gap="8" :cols="1">
+                      <div id="comments-container ">
+                        <n-grid :y-gap="8" :cols="1" >
                           <n-grid-item v-for="item in comments">
                             <div
                               class="box text-center d-flex justify-center align-center"
@@ -318,6 +443,12 @@
                             </div>
                           </n-grid-item>
                         </n-grid>
+                      </div>
+                        <div id="fixed-div">
+                        <v-divider class="my-2"></v-divider>
+
+                          <v-text-field label="Novo Comentário" variant="outlined" append-icon="mdi-send" @click:append="console.log('TESTE')"></v-text-field>
+                        </div>
                       </n-drawer-content>
                     </n-drawer></v-col
                   ></v-row
@@ -325,23 +456,13 @@
               </div>
             </div>
           </v-card>
-
-          <!-- BUTTON DE CONCLUSÃO DE AUDITORIA -->
-
-          <!-- <v-row justify="center" class="mt-0"
-            ><v-col class="text-center"
-              ><v-btn color="green" @click="completedAudit()"
-                >Concluir</v-btn
-              ></v-col
-            ></v-row
-          > -->
         </v-card-text></v-card
       >
     </div>
 
     <!-- CREATE BOX -->
 
-    <v-dialog v-model="showBox" max-width="800">
+    <v-dialog v-model="showBoxAudit" max-width="800">
       <v-card>
         <v-card-title class="text-center">Auditoria</v-card-title>
         <v-card-text>
@@ -393,29 +514,93 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-    {{ auditDates }}
-    {{ audit }}
+
+    <v-dialog v-model="showBoxCompliance" max-width="500">
+      <v-card>
+        <v-card-title class="text-center">Não Conformidade</v-card-title>
+        <v-card-text>
+          <v-row justify="center" class="text-center">
+            <v-col cols="8">
+              <div class="text-overline">prioridade</div>
+              <!-- SELECIONAR AREA -->
+              <v-select
+                v-model="complianceDialog.priority"
+                :items="prioritys"
+                variant="outlined"
+                item-value="value"
+                item-title="name"
+                label="Escolha uma prioridade"
+              ></v-select>
+              <div class="text-overline">descrição</div>
+              <!-- SELECIONAR TURNO -->
+              <v-textarea
+                v-model="complianceDialog.description"
+                variant="outlined"
+                placeholder="Descrição da Não Conformidade"
+              ></v-textarea>
+            </v-col>
+          </v-row>
+        </v-card-text>
+        <!-- SAVE BUTTON -->
+        <v-card-actions class="end__card__save">
+          <v-row justify="end" class="mx-3"
+            ><v-btn color="white" @click="newCompliance()">Salvar</v-btn></v-row
+          >
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <n-modal v-model:show="showReason" :mask-closable="false">
+      <n-card
+        title="Justificativa"
+        :bordered="false"
+        size="huge"
+        role="dialog"
+        aria-modal="true"
+        style="width: 600px"
+      >
+        <v-textarea
+          variant="outlined"
+          label="Descreva a razão da reprogramação"
+        ></v-textarea>
+        <v-btn
+          @click="showReason = !showReason"
+          width="100vw"
+          :color="prometeon"
+          >Salvar</v-btn
+        >
+      </n-card>
+    </n-modal>
   </v-card>
 </template>
 <script>
 export default {
   data: () => ({
+    stepCompliance: null,
+    showReason: false,
+    prometeon: "#212b59",
+    btnSave: false,
     reportFinished: false,
     stepper: 0,
     dateReport: null,
     daysRemaining: null,
-    showBox: false,
+    showBoxCompliance: false,
+    showBoxAudit: false,
     showDrawer: false,
     masterPlan: false,
     pickerDate: null,
+    pickerDisable: { prevDate: true, effectiveDate: true },
     auditDates: {},
+    complianceDates: {},
     auditDialog: {},
+    complianceDialog: {},
     audits: [
       {
         name: "Procurement",
         value: "4",
         mpDate: "25/12/2021",
         description: "",
+        effectiveDate: "23/11/2023",
       },
       {
         name: "Production Planning",
@@ -433,23 +618,23 @@ export default {
     timelineItems: [
       {
         title: "Plano de Ação",
-        color: "#212b59",
         icon: "mdi-note",
+        value: "action",
       },
       {
         title: "Implementação",
-        color: "indigo-darken-2",
         icon: "mdi-arrow-up-bold-outline",
+        value: "deploy",
       },
       {
-        title: "Evidência Entregue",
-        color: "indigo-lighten-1",
+        title: "Entrega de Evidência",
         icon: "mdi-magnify",
+        value: "evidence",
       },
       {
         title: "Verificação da Eficácia",
-        color: "indigo-lighten-3",
         icon: "mdi-layers-triple",
+        value: "validate",
       },
     ],
     areas: [
@@ -460,24 +645,38 @@ export default {
       "ICT",
       "Production Planning",
     ],
+    prioritys: [
+      {
+        name: "Minor",
+        value: 1,
+      },
+      {
+        name: "Major",
+        value: 2,
+      },
+      {
+        name: "Oportunidade de Melhoria",
+        value: 3,
+      },
+    ],
     columnsCompliance: [
       {
-        title: "ID",
-        key: "id",
+        title: "Identificador",
+        key: "name",
       },
       {
-        title: "Auditoria",
-        key: "audit",
+        title: "Prioridade",
+        key: "priority",
       },
       {
-        title: "Data",
-        key: "date",
+        title: "Descrição",
+        key: "description",
       },
     ],
     dataCompliance: [
-      { id: 3, audit: "Indoor", length: "4:18", date: 1 },
-      { id: 4, audit: "Vulcanização", length: "4:48", date: 2 },
-      { id: 12, audit: "R&D", length: "7:27", date: 3 },
+      { id: 1, name: "20230728#01Minor", priority: 2, description: "..." },
+      { id: 2, name: "20230728#02Minor", priority: 1, description: "..." },
+      { id: 3, name: "20230728#03Minor", priority: 3, description: "..." },
     ],
     rowCompliance: null,
     shifts: ["1", "2", "3", "Administrativo"],
@@ -510,27 +709,141 @@ export default {
           "Task '20230815 #01Minor' assigned to Elias Jamile, BR, Maria Juliani Carminatti, BR, Bracesco Fabiana Alves, BR, Horn Sergio Ricardo, BR, Pacini Rodrigo Gomes (STAG), BR",
         date: "August 22, 2023 2:04 PM",
       },
+      {
+        name: "Maria Juliani Carminatti, BR",
+        comment:
+          "Lembrete: O prazo para envio do plano de ação vencerá em 2 dias.",
+        date: "October 11, 2023 4:00 PM",
+      },
+      {
+        name: "Maria Juliani Carminatti, BR",
+        comment:
+          "Task '20230815 #01Minor' assigned to Elias Jamile, BR, Maria Juliani Carminatti, BR, Bracesco Fabiana Alves, BR, Horn Sergio Ricardo, BR, Pacini Rodrigo Gomes (STAG), BR",
+        date: "August 22, 2023 2:04 PM",
+      },
+      {
+        name: "Maria Juliani Carminatti, BR",
+        comment:
+          "Lembrete: O prazo para envio do plano de ação vencerá em 2 dias.",
+        date: "October 11, 2023 4:00 PM",
+      },
+      {
+        name: "Maria Juliani Carminatti, BR",
+        comment:
+          "Task '20230815 #01Minor' assigned to Elias Jamile, BR, Maria Juliani Carminatti, BR, Bracesco Fabiana Alves, BR, Horn Sergio Ricardo, BR, Pacini Rodrigo Gomes (STAG), BR",
+        date: "August 22, 2023 2:04 PM",
+      },
+      {
+        name: "Maria Juliani Carminatti, BR",
+        comment:
+          "Lembrete: O prazo para envio do plano de ação vencerá em 2 dias.",
+        date: "October 11, 2023 4:00 PM",
+      },
+      {
+        name: "Maria Juliani Carminatti, BR",
+        comment:
+          "Task '20230815 #01Minor' assigned to Elias Jamile, BR, Maria Juliani Carminatti, BR, Bracesco Fabiana Alves, BR, Horn Sergio Ricardo, BR, Pacini Rodrigo Gomes (STAG), BR",
+        date: "August 22, 2023 2:04 PM",
+      },
+      {
+        name: "Maria Juliani Carminatti, BR",
+        comment:
+          "Lembrete: O prazo para envio do plano de ação vencerá em 2 dias.",
+        date: "October 11, 2023 4:00 PM",
+      },
+      {
+        name: "Maria Juliani Carminatti, BR",
+        comment:
+          "Task '20230815 #01Minor' assigned to Elias Jamile, BR, Maria Juliani Carminatti, BR, Bracesco Fabiana Alves, BR, Horn Sergio Ricardo, BR, Pacini Rodrigo Gomes (STAG), BR",
+        date: "August 22, 2023 2:04 PM",
+      },
     ],
     iconReport: {},
+    btnSaveDict: {},
   }),
 
   methods: {
-    openBox() {
-      this.showBox = true;
+    openBoxAudit() {
+      this.showBoxAudit = true;
+    },
+    OpenBoxCompliance() {
+      this.showBoxCompliance = true;
     },
     saveAudit() {
       if (this.masterPlan) this.auditDialog["mpDate"] = this.pickerDate;
       else this.auditDialog["prevDate"] = this.pickerDate;
       this.audits.push(this.auditDialog);
       this.auditDialog = {};
-      this.showBox = false;
+      this.showBoxAudit = false;
     },
     newCompliance() {
-      this.btnNewCompliance.color =
-        this.btnNewCompliance.color === "red" ? "green" : "red";
+      var id = this.dataCompliance.length + 1;
+      if (id < 10) {
+        id = `0${id}`;
+      }
+      var pt =
+        this.complianceDialog.priority === 1
+          ? "Minor"
+          : this.complianceDialog.priority === 2
+          ? "Major"
+          : "OM";
 
-      this.btnNewCompliance.text =
-        this.btnNewCompliance.text === "Novo" ? "Cancelar" : "Novo";
+      function obterDataHojeFormatada() {
+        const data = new Date();
+
+        const dia = adicionarZero(data.getDate());
+        const mes = adicionarZero(data.getMonth() + 1); // Meses começam do zero
+        const ano = data.getFullYear();
+
+        const formatadaComum = `${dia}/${mes}/${ano}`;
+        const formatadaName = `${ano}${dia}${mes}`;
+
+        return [formatadaComum, formatadaName];
+      }
+
+      function adicionarZero(numero) {
+        return numero < 10 ? `0${numero}` : numero;
+      }
+
+      function somarDias(dataString, days) {
+        // Divida a string em dia, mês e ano
+        const [dia, mes, ano] = dataString.split("/");
+
+        // Crie um objeto Date
+        const data = new Date(`${ano}-${mes}-${dia}`);
+
+        // Adicione 60 dias
+        data.setDate(data.getDate() + days);
+
+        // Formate a nova data de volta para o formato desejado (dd/mm/yyyy)
+        const diaNovo = String(data.getDate()).padStart(2, "0");
+        const mesNovo = String(data.getMonth() + 1).padStart(2, "0"); // Mês começa do zero
+        const anoNovo = data.getFullYear();
+
+        const novaDataString = `${diaNovo}/${mesNovo}/${anoNovo}`;
+
+        return novaDataString;
+      }
+
+      const dataFormatada = obterDataHojeFormatada();
+
+      var name = `${dataFormatada[1]}#${id}${pt}`;
+      this.complianceDialog["id"] = id;
+      this.complianceDialog["name"] = name;
+
+      if (this.complianceDialog.priority === 2)
+        this.complianceDialog["actionPlan"] = somarDias(dataFormatada[0], 20);
+      else
+        this.complianceDialog["actionPlan"] = somarDias(dataFormatada[0], 60);
+
+      this.dataCompliance.push(this.complianceDialog);
+      this.showBoxCompliance = false;
+      this.complianceDialog = {
+        id: null,
+        priority: null,
+        description: null,
+        name: null,
+      };
     },
     countdown(data) {
       const dataString = data;
@@ -568,8 +881,38 @@ export default {
 
       return diferencaEmDias;
     },
-    reprogram() {
-      this.audit = { ...this.audit, ...this.auditDates };
+    alternableBtn(button) {
+      this.btnSave = !this.btnSave;
+      if (button === "reprogram") {
+        this.pickerDisable.prevDate = !this.pickerDisable.prevDate;
+        this.showReason = !this.showReason;
+      }
+      if (button === "finishAudit")
+        this.pickerDisable.effectiveDate = !this.pickerDisable.effectiveDate;
+
+      if (button != "cancel" && button != "save") {
+        this.btnSaveDict["call"] = button;
+      }
+
+      if (button === "save") {
+        if (this.btnSaveDict.call === "reprogram") {
+          this.audit = { ...this.audit, ...this.auditDates };
+          this.pickerDisable.prevDate = true;
+        } else {
+          this.pickerDisable.effectiveDate = true;
+          this.finishAudit();
+        }
+      }
+
+      if (button === "cancel") {
+        this.pickerDisable.effectiveDate = true;
+        this.pickerDisable.prevDate = true;
+
+        this.auditDates.effectiveDate = null;
+        if (this.audit.prevDate) {
+          this.auditDates.prevDate = this.audit.prevDate;
+        } else this.auditDates.prevDate = null;
+      }
     },
     finishAudit() {
       this.audit = { ...this.audit, ...this.auditDates };
@@ -587,6 +930,15 @@ export default {
     completedAudit() {
       this.stepper = 3;
     },
+    clear() {
+      this.reportFinished = false;
+      this.daysRemaining = null;
+      this.stepper = 0;
+      this.dateReport = null;
+      this.btnSave = false;
+      this.pickerDisable.effectiveDate = true;
+      this.pickerDisable.prevDate = true;
+    },
   },
 
   computed: {},
@@ -595,27 +947,32 @@ export default {
     audits(val) {
       this.tab = val - 1;
     },
-    // audit() {
-    //   if (this.audit.prevDate) {
-    //     this.auditDates.prevDate = this.audit.prevDate;
-    //   }
-    // },
     audit: {
       handler(newAudit, oldAudit) {
         for (const key in newAudit) {
           if (newAudit[key] !== oldAudit[key]) {
-            if (key === "name"){
-              this.reportFinished = false;
-              this.daysRemaining = null;
-              this.stepper = 0;
-              this.dateReport = null;
-              
-              if(this.audit.prevDate) this.auditDates = { prevDate: this.audit.prevDate};
-              else this.auditDates = {prevDate: null}
+            if (key === "name") {
+              this.clear();
 
-              if(this.audit.effectiveDate) this.auditDates = { effectiveDate: this.audit.effectiveDate};
-              else this.auditDates.effectiveDate = null;
-            } 
+              if (this.audit.prevDate)
+                this.auditDates = { prevDate: this.audit.prevDate };
+              else this.auditDates = { prevDate: null };
+
+              if (this.audit.effectiveDate) {
+                this.auditDates = { effectiveDate: this.audit.effectiveDate };
+                this.daysRemaining = this.countdown(this.audit.effectiveDate);
+                if (this.reportFinished) {
+                  this.iconReport.icon = "check-decagram-outline";
+                  this.iconReport.color = "green";
+                } else {
+                  this.iconReport.icon = "clock-time-eight-outline";
+                  this.iconReport.color = "black";
+                }
+              } else {
+                this.auditDates.effectiveDate = null;
+                this.iconReport.icon = "";
+              }
+            }
           }
         }
       },
@@ -623,6 +980,7 @@ export default {
     },
     auditDates() {
       if (this.auditDates.effectiveDate) {
+        this.stepper = 1;
       }
     },
     auditDialog() {
@@ -630,8 +988,18 @@ export default {
         this.auditDates.mpDate = this.auditDialog.mp;
       }
     },
-    showBox() {
-      if (!this.showBox) this.masterPlan = false;
+    rowCompliance() {
+      if (this.dataCompliance[this.rowCompliance - 1].validate)
+        this.stepCompliance = 3;
+      else if (this.dataCompliance[this.rowCompliance - 1].evidence)
+        this.stepCompliance = 2;
+      else if (this.dataCompliance[this.rowCompliance - 1].deployment)
+        this.stepCompliance = 1;
+      else if (this.dataCompliance[this.rowCompliance - 1].actionPlan)
+        this.stepCompliance = 0;
+    },
+    showBoxAudit() {
+      if (!this.showBoxAudit) this.masterPlan = false;
     },
   },
 };
@@ -669,5 +1037,27 @@ export default {
 .timeline {
   background-color: #212b59;
   color: white;
+}
+
+.card__plan {
+  border: 1px solid #797979;
+  border-radius: 5px;
+}
+
+#fixed-div {
+  position: fixed;
+  bottom: 0;
+  width: 500px;
+  padding: 10px;
+  box-sizing: border-box;
+  background-color: #FFF
+}
+
+#comments-container {
+  background-color:#000;
+  max-height: calc(100vh - 200px); /* Altura máxima da tela menos a altura da div fixa */
+  overflow-y: auto;
+  padding: 10px;
+  box-sizing: border-box;
 }
 </style>
