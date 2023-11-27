@@ -579,7 +579,6 @@
       </n-card>
     </n-modal>
   </v-card>
-  {{ dataUpdates }}
 </template>
 <script>
 export default {
@@ -741,6 +740,7 @@ export default {
       if(action === 'cancel') {
         this.dataUpdates.reason = null;
         this.showReason = !this.showReason
+        this.pickerDisable.prevDate = true;
       }
       if(action === 'save') {
         this.btnSave = !this.btnSave
@@ -1001,6 +1001,7 @@ export default {
   background-color: #f5f5f5;
   padding: 1rem;
   border: 1px solid #212b59;
+  border-radius: 5px;
 }
 
 .card__content {

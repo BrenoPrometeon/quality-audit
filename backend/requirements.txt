@@ -1,0 +1,12 @@
+gunicorn
+uvicorn
+fastapi
+strawberry-graphql
+python-dotenv
+pydantic
+sqlmodel
+greenlet
+asyncpg
+SQLAlchemy
+PyJWT
+colorlog
