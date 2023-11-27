@@ -414,8 +414,7 @@
                     >
                     <n-drawer
                       v-model:show="showDrawer"
-                      :width="500"
-                      :height="200"
+                      width="30vw"
                     >
                       <n-drawer-content
                         title="Comentários"
@@ -423,7 +422,7 @@
                         closable
                         trigger="none"
                       >
-                      <div id="comments-container ">
+                      <div id="comments-container">
                         <n-grid :y-gap="8" :cols="1" >
                           <n-grid-item v-for="item in comments">
                             <div
@@ -561,21 +560,31 @@
       >
         <v-textarea
           variant="outlined"
+          v-model="dataUpdates.reason"
           label="Descreva a razão da reprogramação"
         ></v-textarea>
+        <v-row justify="space-around">
         <v-btn
-          @click="showReason = !showReason"
-          width="100vw"
+          @click="reason('cancel')"
+          width="45%"
+          color="red"
+          >Cancelar</v-btn
+        ><v-btn
+          @click="reason('save')"
+          width="45%"
+          :disabled="!dataUpdates.reason"
           :color="prometeon"
           >Salvar</v-btn
-        >
+        ></v-row>
       </n-card>
     </n-modal>
   </v-card>
+  {{ dataUpdates }}
 </template>
 <script>
 export default {
   data: () => ({
+    dataUpdates: {},
     stepCompliance: null,
     showReason: false,
     prometeon: "#212b59",
@@ -708,55 +717,7 @@ export default {
         comment:
           "Task '20230815 #01Minor' assigned to Elias Jamile, BR, Maria Juliani Carminatti, BR, Bracesco Fabiana Alves, BR, Horn Sergio Ricardo, BR, Pacini Rodrigo Gomes (STAG), BR",
         date: "August 22, 2023 2:04 PM",
-      },
-      {
-        name: "Maria Juliani Carminatti, BR",
-        comment:
-          "Lembrete: O prazo para envio do plano de ação vencerá em 2 dias.",
-        date: "October 11, 2023 4:00 PM",
-      },
-      {
-        name: "Maria Juliani Carminatti, BR",
-        comment:
-          "Task '20230815 #01Minor' assigned to Elias Jamile, BR, Maria Juliani Carminatti, BR, Bracesco Fabiana Alves, BR, Horn Sergio Ricardo, BR, Pacini Rodrigo Gomes (STAG), BR",
-        date: "August 22, 2023 2:04 PM",
-      },
-      {
-        name: "Maria Juliani Carminatti, BR",
-        comment:
-          "Lembrete: O prazo para envio do plano de ação vencerá em 2 dias.",
-        date: "October 11, 2023 4:00 PM",
-      },
-      {
-        name: "Maria Juliani Carminatti, BR",
-        comment:
-          "Task '20230815 #01Minor' assigned to Elias Jamile, BR, Maria Juliani Carminatti, BR, Bracesco Fabiana Alves, BR, Horn Sergio Ricardo, BR, Pacini Rodrigo Gomes (STAG), BR",
-        date: "August 22, 2023 2:04 PM",
-      },
-      {
-        name: "Maria Juliani Carminatti, BR",
-        comment:
-          "Lembrete: O prazo para envio do plano de ação vencerá em 2 dias.",
-        date: "October 11, 2023 4:00 PM",
-      },
-      {
-        name: "Maria Juliani Carminatti, BR",
-        comment:
-          "Task '20230815 #01Minor' assigned to Elias Jamile, BR, Maria Juliani Carminatti, BR, Bracesco Fabiana Alves, BR, Horn Sergio Ricardo, BR, Pacini Rodrigo Gomes (STAG), BR",
-        date: "August 22, 2023 2:04 PM",
-      },
-      {
-        name: "Maria Juliani Carminatti, BR",
-        comment:
-          "Lembrete: O prazo para envio do plano de ação vencerá em 2 dias.",
-        date: "October 11, 2023 4:00 PM",
-      },
-      {
-        name: "Maria Juliani Carminatti, BR",
-        comment:
-          "Task '20230815 #01Minor' assigned to Elias Jamile, BR, Maria Juliani Carminatti, BR, Bracesco Fabiana Alves, BR, Horn Sergio Ricardo, BR, Pacini Rodrigo Gomes (STAG), BR",
-        date: "August 22, 2023 2:04 PM",
-      },
+      }
     ],
     iconReport: {},
     btnSaveDict: {},
@@ -776,6 +737,16 @@ export default {
       this.auditDialog = {};
       this.showBoxAudit = false;
     },
+    reason(action){
+      if(action === 'cancel') {
+        this.dataUpdates.reason = null;
+        this.showReason = !this.showReason
+      }
+      if(action === 'save') {
+        this.btnSave = !this.btnSave
+        this.showReason = !this.showReason
+      }
+    }, 
     newCompliance() {
       var id = this.dataCompliance.length + 1;
       if (id < 10) {
@@ -882,10 +853,12 @@ export default {
       return diferencaEmDias;
     },
     alternableBtn(button) {
-      this.btnSave = !this.btnSave;
       if (button === "reprogram") {
         this.pickerDisable.prevDate = !this.pickerDisable.prevDate;
         this.showReason = !this.showReason;
+      }
+      else{
+        this.btnSave = !this.btnSave;
       }
       if (button === "finishAudit")
         this.pickerDisable.effectiveDate = !this.pickerDisable.effectiveDate;
@@ -1047,15 +1020,14 @@ export default {
 #fixed-div {
   position: fixed;
   bottom: 0;
-  width: 500px;
+  width: 28vw;
   padding: 10px;
   box-sizing: border-box;
   background-color: #FFF
 }
 
 #comments-container {
-  background-color:#000;
-  max-height: calc(100vh - 200px); /* Altura máxima da tela menos a altura da div fixa */
+  max-height: calc(100vh - 180px); /* Altura máxima da tela menos a altura da div fixa */
   overflow-y: auto;
   padding: 10px;
   box-sizing: border-box;
