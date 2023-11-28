@@ -164,7 +164,7 @@
             <div class="pa-2">
               <!-- STATUS RELATÓRIO -->
               <v-row
-                v-if="tabAuditView == 0"
+                v-if="tabAuditView == 0" data-aos="fade-down" data-aos-duration="800"
                 justify="space-around"
                 class="ma-3"
                 ><v-col cols="5" class="text-center text-h6"
@@ -235,7 +235,7 @@
               >
 
               <!-- STATUS NAO CONFORMIDADES -->
-              <div v-if="tabAuditView == 1">
+              <div v-if="tabAuditView == 1" data-aos="fade-up" data-aos-duration="800">
                 <!-- NEW BUTTON -->
                 <v-row justify="center" class="ma-1"
                   ><v-col class="text-end"
@@ -412,51 +412,52 @@
                     >
                       Comentários</v-btn
                     >
-                    <n-drawer
-                      v-model:show="showDrawer"
-                      width="30vw"
-                    >
+                    <n-drawer v-model:show="showDrawer" width="30vw">
                       <n-drawer-content
                         title="Comentários"
                         :native-scrollbar="false"
                         closable
                         trigger="none"
                       >
-                      <div id="comments-container">
-                        <n-grid :y-gap="8" :cols="1" >
-                          <n-grid-item v-for="item in comments">
-                            <div
-                              class="box text-center d-flex justify-center align-center"
-                            >
-                              <v-row justify="center"
-                                ><v-col
-                                  cols="6"
-                                  class="text-start font-weight-black"
-                                  >{{ item.name }}</v-col
-                                ><v-col cols="6" class="text-end font-italic">{{
-                                  item.date
-                                }}</v-col>
-                                <v-divider class="mx-3"></v-divider>
-                                <v-col>{{ item.comment }}</v-col>
-                              </v-row>
-                            </div>
-                          </n-grid-item>
-                        </n-grid>
-                      </div>
-                        <div id="fixed-div">
-                        <v-divider class="my-2"></v-divider>
-
-                          <v-text-field label="Novo Comentário" variant="outlined" append-icon="mdi-send" @click:append="console.log('TESTE')"></v-text-field>
+                        <div id="comments-container">
+                          <n-grid :y-gap="8" :cols="1">
+                            <n-grid-item v-for="item in comments">
+                              <div
+                                class="box text-center d-flex justify-center align-center"
+                              >
+                                <v-row justify="center"
+                                  ><v-col
+                                    cols="6"
+                                    class="text-start font-weight-black"
+                                    >{{ item.name }}</v-col
+                                  ><v-col
+                                    cols="6"
+                                    class="text-end font-italic"
+                                    >{{ item.date }}</v-col
+                                  >
+                                  <v-divider class="mx-3"></v-divider>
+                                  <v-col>{{ item.comment }}</v-col>
+                                </v-row>
+                              </div>
+                            </n-grid-item>
+                          </n-grid>
                         </div>
-                      </n-drawer-content>
-                    </n-drawer></v-col
-                  ></v-row
-                >
+                        <div id="fixed-div">
+                          <v-divider class="my-2"></v-divider>
+
+                          <v-text-field
+                            label="Novo Comentário"
+                            variant="outlined"
+                            append-icon="mdi-send"
+                            @click:append="console.log('TESTE')"
+                          ></v-text-field>
+                        </div>
+                      </n-drawer-content> </n-drawer></v-col
+                ></v-row>
               </div>
             </div>
-          </v-card>
-        </v-card-text></v-card
-      >
+          </v-card> </v-card-text
+      ></v-card>
     </div>
 
     <!-- CREATE BOX -->
@@ -564,23 +565,24 @@
           label="Descreva a razão da reprogramação"
         ></v-textarea>
         <v-row justify="space-around">
-        <v-btn
-          @click="reason('cancel')"
-          width="45%"
-          color="red"
-          >Cancelar</v-btn
-        ><v-btn
-          @click="reason('save')"
-          width="45%"
-          :disabled="!dataUpdates.reason"
-          :color="prometeon"
-          >Salvar</v-btn
-        ></v-row>
+          <v-btn @click="reason('cancel')" width="45%" color="red"
+            >Cancelar</v-btn
+          ><v-btn
+            @click="reason('save')"
+            width="45%"
+            :disabled="!dataUpdates.reason"
+            :color="prometeon"
+            >Salvar</v-btn
+          ></v-row
+        >
       </n-card>
     </n-modal>
   </v-card>
 </template>
 <script>
+import AOS from "aos";
+import "aos/dist/aos.css";
+AOS.init();
 export default {
   data: () => ({
     dataUpdates: {},
@@ -716,7 +718,7 @@ export default {
         comment:
           "Task '20230815 #01Minor' assigned to Elias Jamile, BR, Maria Juliani Carminatti, BR, Bracesco Fabiana Alves, BR, Horn Sergio Ricardo, BR, Pacini Rodrigo Gomes (STAG), BR",
         date: "August 22, 2023 2:04 PM",
-      }
+      },
     ],
     iconReport: {},
     btnSaveDict: {},
@@ -736,17 +738,17 @@ export default {
       this.auditDialog = {};
       this.showBoxAudit = false;
     },
-    reason(action){
-      if(action === 'cancel') {
+    reason(action) {
+      if (action === "cancel") {
         this.dataUpdates.reason = null;
-        this.showReason = !this.showReason
+        this.showReason = !this.showReason;
         this.pickerDisable.prevDate = true;
       }
-      if(action === 'save') {
-        this.btnSave = !this.btnSave
-        this.showReason = !this.showReason
+      if (action === "save") {
+        this.btnSave = !this.btnSave;
+        this.showReason = !this.showReason;
       }
-    }, 
+    },
     newCompliance() {
       var id = this.dataCompliance.length + 1;
       if (id < 10) {
@@ -856,8 +858,7 @@ export default {
       if (button === "reprogram") {
         this.pickerDisable.prevDate = !this.pickerDisable.prevDate;
         this.showReason = !this.showReason;
-      }
-      else{
+      } else {
         this.btnSave = !this.btnSave;
       }
       if (button === "finishAudit")
@@ -1024,11 +1025,13 @@ export default {
   width: 28vw;
   padding: 10px;
   box-sizing: border-box;
-  background-color: #FFF
+  background-color: #fff;
 }
 
 #comments-container {
-  max-height: calc(100vh - 180px); /* Altura máxima da tela menos a altura da div fixa */
+  max-height: calc(
+    100vh - 180px
+  ); /* Altura máxima da tela menos a altura da div fixa */
   overflow-y: auto;
   padding: 10px;
   box-sizing: border-box;

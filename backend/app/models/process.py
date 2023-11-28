@@ -1,8 +1,11 @@
 from sqlmodel import Field
 
-from graphemy import MyModel, dl, get_list, get_one
+from graphemy import MyModel, get_one
 
 
 class Process(MyModel, table=True):
-    id: str = Field(primary_key=True)
+    id: int = Field(primary_key=True)
     description: str
+
+async def dl_process(keys: list[tuple]) -> Process.schema:
+    return await get_one(Process, keys)
