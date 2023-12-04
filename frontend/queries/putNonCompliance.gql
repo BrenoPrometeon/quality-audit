@@ -1,0 +1,7 @@
+mutation MyMutation ($actionPlan:[Int], $auditId:[Int!], $createdAt:[DateTime!], $createdBy:[String!], $deployment:[Int], $description:[String!], $evidence:[Bool], $id:[Int!], $modifiedAt:[DateTime], modifiedBy:[String], $priorityId:[Int!], $statusId:[Int], $validation:[Int] ) {
+  putNoncompliance(
+    params: {actionPlan: $actionPlan, auditId: $auditId, createdAt: $createdAt, createdBy: $createdBy, deployment: $deployment, description: $description, evidence: $evidence, id: $id, modifiedAt: $modifiedAt, modifiedBy: $modifiedBy, priorityId: $priorityId, statusId: $statusId, validation: $validation}
+  ) {
+    id
+  }
+}

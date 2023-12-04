@@ -1,0 +1,7 @@
+mutation MyMutation($id:[Int!], $createdBy:[String!], $createdAt:[DateTime!], $masterPlan:[Date], $effective:[Date], $forecast:[Date]) {
+  putDate(
+    params: {createdAt: $createdAt, createdBy: $createdBy, id: $id, masterPlan: $masterPlan, forecast: $forecast, effective: $effective, }
+  ) {
+    id
+  }
+}

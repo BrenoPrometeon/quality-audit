@@ -1,0 +1,7 @@
+mutation MyMutation($id:[Int!], $createdBy:[String!], $createdAt:[DateTime!], $comment:[String!], $nonComplianceId:[Int!]) {
+  putComment(
+    params: {id: $id, comment: $comment, createdAt: $createdAt, createdBy: $createdBy, nonComplianceId: $nonComplianceId}
+  ) {
+    id
+  }
+}

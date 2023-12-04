@@ -1,0 +1,7 @@
+mutation MyMutation($id:[Int!], $reason:[String!], $newDate:[Int!], $modifiedBy:[String!], $modifiedAt:[DateTime!]) {
+  putDateupdates(
+    params: {id: $id, reason: $reason, newDate: $newDate, modifiedBy: $modifiedBy, dateId: $dateId, modifiedAt: $modifiedAt}
+  ) {
+    id
+  }
+}

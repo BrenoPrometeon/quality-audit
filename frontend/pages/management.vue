@@ -164,7 +164,9 @@
             <div class="pa-2">
               <!-- STATUS RELATÓRIO -->
               <v-row
-                v-if="tabAuditView == 0" data-aos="fade-down" data-aos-duration="800"
+                v-if="tabAuditView == 0"
+                data-aos="fade-up"
+                data-aos-duration="800"
                 justify="space-around"
                 class="ma-3"
                 ><v-col cols="5" class="text-center text-h6"
@@ -235,7 +237,11 @@
               >
 
               <!-- STATUS NAO CONFORMIDADES -->
-              <div v-if="tabAuditView == 1" data-aos="fade-up" data-aos-duration="800">
+              <div
+                v-if="tabAuditView == 1"
+                data-aos="fade-up"
+                data-aos-duration="800"
+              >
                 <!-- NEW BUTTON -->
                 <v-row justify="center" class="ma-1"
                   ><v-col class="text-end"
@@ -293,7 +299,7 @@
                     >
                       <!-- CONTEUDO TIMELINE DE CADA ITEM -->
 
-                      <v-card elevation="8" :disabled="!(i <= stepCompliance)">
+                      <v-card elevation="8" :disabled="!(i == stepCompliance)">
                         <v-card
                           rounded="0"
                           :class="[
@@ -365,10 +371,9 @@
                               <v-banner
                                 lines="one"
                                 icon="mdi-send-check"
-                                color="green"
                                 class="my-4"
                               >
-                                <v-banner-text> Aguardando... </v-banner-text>
+                                <v-banner-text><p v-if="stepCompliance<3">Aguardando</p><p v-else>Entregue!</p> </v-banner-text>
 
                                 <template v-slot:actions>
                                   <v-btn
@@ -446,10 +451,12 @@
                           <v-divider class="my-2"></v-divider>
 
                           <v-text-field
+                            v-model="comment"
                             label="Novo Comentário"
                             variant="outlined"
                             append-icon="mdi-send"
-                            @click:append="console.log('TESTE')"
+                            @click:append="saveComment()"
+                            @keydown.enter="saveComment()"
                           ></v-text-field>
                         </div>
                       </n-drawer-content> </n-drawer></v-col
@@ -586,7 +593,7 @@ AOS.init();
 export default {
   data: () => ({
     dataUpdates: {},
-    stepCompliance: null,
+    stepCompliance: 0,
     showReason: false,
     prometeon: "#212b59",
     btnSave: false,
@@ -701,11 +708,12 @@ export default {
         value: 1,
       },
     ],
-    tabAuditView: {},
+    tabAuditView: null,
     btnNewCompliance: {
       color: "green",
       text: "Novo",
     },
+    comment: null,
     comments: [
       {
         name: "Maria Juliani Carminatti, BR",
@@ -904,6 +912,28 @@ export default {
     completedAudit() {
       this.stepper = 3;
     },
+    saveComment() {
+      var newComment = {}
+      newComment['comment'] = this.comment
+      function capturarDataHoraAtual() {
+        var dataAtual = new Date();
+        var options = {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+          hour: "numeric",
+          minute: "numeric",
+        };
+        var dataFormatada = dataAtual.toLocaleString("pt-BR", options);
+        return dataFormatada;
+      }
+      if (this.comment) {
+        newComment["date"] = capturarDataHoraAtual();
+        newComment["name"] = "Matheus Doreto";
+        this.comments.push(newComment);
+      }
+      this.comment = null;
+    },
     clear() {
       this.reportFinished = false;
       this.daysRemaining = null;
@@ -912,6 +942,7 @@ export default {
       this.btnSave = false;
       this.pickerDisable.effectiveDate = true;
       this.pickerDisable.prevDate = true;
+      this.tabAuditView = 0;
     },
   },
 
@@ -1031,7 +1062,7 @@ export default {
 #comments-container {
   max-height: calc(
     100vh - 180px
-  ); /* Altura máxima da tela menos a altura da div fixa */
+  ); 
   overflow-y: auto;
   padding: 10px;
   box-sizing: border-box;
