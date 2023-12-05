@@ -61,14 +61,14 @@
         <!-- CONTEUDO  -->
 
         <v-card-text>
-          <!-- DATA MP -->
+          <!-- DATA PREVISTA -->
 
           <v-row justify="space-around" class="my-3"
             ><v-col
               cols="3"
               class="d-flex justify-center flex-columns align-center text-center"
               ><v-card class="pa-10" elevation="14"
-                ><p class="text-h6 font-weight-bold">Master Plan</p>
+                ><p class="text-h6 font-weight-bold">Previsto</p>
                 <v-divider></v-divider
                 ><n-statistic :value="audit.mpDate" class="text-center">
                   <template #prefix
@@ -96,7 +96,7 @@
                       class="text-overline text-center"
                       cols="4"
                       v-for="d in [
-                        { title: 'Previsão', value: 'prev' },
+                        { title: 'Reprogramado', value: 'reprog' },
                         { title: 'Efetivo', value: 'effective' },
                       ]"
                       ><v-row justify="center"> {{ d.title }}</v-row
@@ -106,6 +106,7 @@
                             v-model:formatted-value="
                               auditDates[d['value'] + type.value]
                             "
+                            :is-date-disabled="disablePreviousDate"
                             type="date"
                             value-format="dd/MM/yyyy"
                             size="large"
@@ -373,7 +374,10 @@
                                 icon="mdi-send-check"
                                 class="my-4"
                               >
-                                <v-banner-text><p v-if="stepCompliance<3">Aguardando</p><p v-else>Entregue!</p> </v-banner-text>
+                                <v-banner-text
+                                  ><p v-if="stepCompliance < 3">Aguardando</p>
+                                  <p v-else>Entregue!</p>
+                                </v-banner-text>
 
                                 <template v-slot:actions>
                                   <v-btn
@@ -469,6 +473,72 @@
 
     <!-- CREATE BOX -->
 
+    <!-- DEFINIÇÃO DO PRAZO MÁXIMO PARA ENVIO DO RELATÓRIO -->
+    <v-dialog v-model="showBoxReport" max-width="600">
+      <v-card>
+        <v-card-title class="text-center">Entrega do Relatório</v-card-title>
+        <v-card-text>
+          <v-row justify="center"
+            ><v-col cols="auto" class="text-center"
+              ><p>
+                Escolha uma data prevista que seja <br />
+                pelo menos 10 dias úteis dada a referência!
+              </p>
+              <n-date-picker
+                panel
+                type="date"
+                value-format="dd/MM/yyyy"
+                v-model:formatted-value="dateReport"
+                class="text-center date__picker" /></v-col
+          ></v-row>
+        </v-card-text>
+        <!-- SAVE BUTTON -->
+        <v-card-actions class="end__card__save">
+          <v-row justify="end" class="mx-3"
+            ><v-btn
+              color="white"
+              @click="this.finishAudit()"
+              :disabled="!dateReport"
+              >Salvar</v-btn
+            ></v-row
+          >
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- DEFINIÇÃO DO DIA DA ENTREGA DO RELATÓRIO -->
+    <v-dialog v-model="showBoxReportDate" max-width="600">
+      <v-card>
+        <v-card-title class="text-center">Efetuação da Entrega</v-card-title>
+        <v-card-text>
+          <v-row justify="center"
+            ><v-col cols="auto" class="text-center">
+              <n-date-picker
+                panel
+                type="date"
+                value-format="dd/MM/yyyy"
+                v-model:formatted-value="dateReportReceive"
+                class="text-center date__picker" /></v-col
+            ><v-col v-if="daysRemaining < 0" cols="11" class="text-center"
+              ><p class="text-overline">Motivo do Atraso</p><v-text-field variant="outlined" label="Descreva o que ocasionou o atraso"></v-text-field
+            ></v-col>
+          </v-row>
+        </v-card-text>
+        <!-- SAVE BUTTON -->
+        <v-card-actions class="end__card__save">
+          <v-row justify="end" class="mx-3"
+            ><v-btn
+              color="white"
+              @click="showBoxReportDate = false"
+              :disabled="!dateReportReceive"
+              >Salvar</v-btn
+            ></v-row
+          >
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- CAIXA DE CRIAÇÃO DE AUDITORIA -->
     <v-dialog v-model="showBoxAudit" max-width="800">
       <v-card>
         <v-card-title class="text-center">Auditoria</v-card-title>
@@ -489,6 +559,7 @@
               <v-select
                 v-model="auditDialog.shift"
                 :items="shifts"
+                multiple
                 variant="outlined"
                 label="Escolha uma turno"
                 class="select__box"
@@ -522,6 +593,7 @@
       </v-card>
     </v-dialog>
 
+    <!-- CAIXA DE CRIAÇÃO DE NÃO CONFORMIDADE -->
     <v-dialog v-model="showBoxCompliance" max-width="500">
       <v-card>
         <v-card-title class="text-center">Não Conformidade</v-card-title>
@@ -557,6 +629,7 @@
       </v-card>
     </v-dialog>
 
+    <!-- CAIXA DE JUSTIFICATIVA DE REPROGRAMAÇÃO -->
     <n-modal v-model:show="showReason" :mask-closable="false">
       <n-card
         title="Justificativa"
@@ -584,6 +657,33 @@
         >
       </n-card>
     </n-modal>
+
+    <!-- CAIXA DE JUSTIFICATIVA DE ATRASO DO RELATÓRIO -->
+    <n-modal v-model:show="showReasonReport" :mask-closable="false">
+      <n-card
+        title="Motivo do Atraso"
+        :bordered="false"
+        size="huge"
+        role="dialog"
+        aria-modal="true"
+        style="width: 600px"
+      >
+        <v-textarea
+          variant="outlined"
+          v-model="reasonReport"
+          label="Descreva o que levou ao atraso!"
+        ></v-textarea>
+        <v-row justify="space-around">
+          <v-btn
+            @click="showReasonReport = false"
+            width="95%"
+            :disabled="!reasonReport"
+            :color="prometeon"
+            >Salvar</v-btn
+          ></v-row
+        >
+      </n-card>
+    </n-modal>
   </v-card>
 </template>
 <script>
@@ -595,18 +695,23 @@ export default {
     dataUpdates: {},
     stepCompliance: 0,
     showReason: false,
+    showReasonReport: false,
     prometeon: "#212b59",
     btnSave: false,
     reportFinished: false,
     stepper: 0,
     dateReport: null,
+    dateReportReceive: null,
+    showBoxReportDate: false,
+    reasonReport: null,
     daysRemaining: null,
     showBoxCompliance: false,
     showBoxAudit: false,
+    showBoxReport: false,
     showDrawer: false,
     masterPlan: false,
     pickerDate: null,
-    pickerDisable: { prevDate: true, effectiveDate: true },
+    pickerDisable: { reprogDate: true, effectiveDate: true },
     auditDates: {},
     complianceDates: {},
     auditDialog: {},
@@ -733,6 +838,9 @@ export default {
   }),
 
   methods: {
+    disablePreviousDate(ts) {
+      return ts > Date.now();
+    },
     openBoxAudit() {
       this.showBoxAudit = true;
     },
@@ -767,7 +875,7 @@ export default {
           ? "Minor"
           : this.complianceDialog.priority === 2
           ? "Major"
-          : "OM";
+          : "Ofi";
 
       function obterDataHojeFormatada() {
         const data = new Date();
@@ -838,20 +946,7 @@ export default {
       const dataOriginal = converterStringParaData(dataString);
 
       const dataCom10Dias = new Date(dataOriginal);
-      dataCom10Dias.setDate(dataOriginal.getDate() + 10);
-
-      function formatarData(dataString) {
-        const data = new Date(dataString);
-
-        const dia = String(data.getDate()).padStart(2, "0");
-        const mes = String(data.getMonth() + 1).padStart(2, "0");
-        const ano = data.getFullYear();
-
-        const dataFormatada = `${dia}/${mes}/${ano}`;
-
-        return dataFormatada;
-      }
-      this.dateReport = formatarData(dataCom10Dias);
+      dataCom10Dias.setDate(dataOriginal.getDate());
 
       const dataAtual = new Date();
 
@@ -859,7 +954,6 @@ export default {
       const diferencaEmDias = Math.ceil(
         diferencaEmMilissegundos / (1000 * 60 * 60 * 24)
       );
-
       return diferencaEmDias;
     },
     alternableBtn(button) {
@@ -882,7 +976,7 @@ export default {
           this.pickerDisable.prevDate = true;
         } else {
           this.pickerDisable.effectiveDate = true;
-          this.finishAudit();
+          this.showBoxReport = true;
         }
       }
 
@@ -898,23 +992,25 @@ export default {
     },
     finishAudit() {
       this.audit = { ...this.audit, ...this.auditDates };
-      this.daysRemaining = this.countdown(this.auditDates.effectiveDate);
+      this.daysRemaining = this.countdown(this.dateReport);
       this.iconReport.icon = "clock-time-eight-outline";
       this.iconReport.color = "black";
       this.stepper = 1;
+      this.showBoxReport = false;
     },
     reportSubmitted() {
       this.iconReport.color = "green";
       this.iconReport.icon = "check-decagram-outline";
       this.stepper = 2;
       this.reportFinished = true;
+      this.showBoxReportDate = true;
     },
     completedAudit() {
       this.stepper = 3;
     },
     saveComment() {
-      var newComment = {}
-      newComment['comment'] = this.comment
+      var newComment = {};
+      newComment["comment"] = this.comment;
       function capturarDataHoraAtual() {
         var dataAtual = new Date();
         var options = {
@@ -1060,9 +1156,7 @@ export default {
 }
 
 #comments-container {
-  max-height: calc(
-    100vh - 180px
-  ); 
+  max-height: calc(100vh - 180px);
   overflow-y: auto;
   padding: 10px;
   box-sizing: border-box;
