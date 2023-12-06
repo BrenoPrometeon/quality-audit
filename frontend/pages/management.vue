@@ -6,7 +6,7 @@
       <v-tabs v-model="audit" :color="prometeon" direction="vertical">
         <v-tab
           v-for="n in audits"
-          :key="n.mpDate ? n.mpDate : n.prevDate"
+          :key="n.mpDate ? n.mpDate : n.reprogDate"
           :value="n"
         >
           {{ n.name }}
@@ -108,6 +108,7 @@
                             "
                             :is-date-disabled="disablePreviousDate"
                             type="date"
+                            clearable
                             value-format="dd/MM/yyyy"
                             size="large"
                             :disabled="pickerDisable[d['value'] + type.value]"
@@ -135,7 +136,7 @@
                       color="green"
                       class="mr-3"
                       :disabled="
-                        (auditDates.prevDate == audit.prevDate &&
+                        (auditDates.reprogDate == audit.reprogDate &&
                           btnSaveDict.call == 'reprogram') ||
                         (auditDates.effectiveDate == null &&
                           btnSaveDict.call == 'finishAudit')
@@ -211,7 +212,7 @@
                       >
                         <template #prefix
                           ><v-icon
-                            v-if="!audit.effectiveDate"
+                            v-if="!dateReport"
                             icon="mdi-calendar-alert"
                           ></v-icon>
                         </template> </n-statistic
@@ -223,19 +224,32 @@
                         :color="iconReport.color"
                       ></v-icon
                     ></v-col>
-                    <v-col cols="12" class="text-center"
+                    <v-col
+                      v-if="!dateReportReceive"
+                      cols="12"
+                      class="text-center"
+                      ><v-btn
+                        :disabled="!dateReport"
+                        color="orange"
+                        class="mr-3"
+                        @click="reportSubmitted('reprog')"
+                        >Reprogramar</v-btn
                       ><v-btn
                         color="green"
                         :disabled="
                           !this.audit.effectiveDate || this.reportFinished
                         "
-                        @click="reportSubmitted()"
-                        >Entregar relatório</v-btn
+                        @click="reportSubmitted('save')"
+                        >Entregar</v-btn
                       ></v-col
-                    ></v-row
-                  ></v-col
-                ></v-row
-              >
+                    ><v-col v-else cols="12" class="text-center"
+                      ><n-statistic
+                        label="Data final da entrega"
+                        :value="dateReportReceive"
+                        class="text-center my-6"
+                      >
+                      </n-statistic></v-col></v-row></v-col
+              ></v-row>
 
               <!-- STATUS NAO CONFORMIDADES -->
               <div
@@ -267,6 +281,9 @@
                       :id="['id']"
                       :height="false"
                       selectable
+                      :on-update:checked-row-keys="
+                        setStepTimeline(rowCompliance)
+                      "
                       v-model="rowCompliance"
                     >
                     </p-data-table></v-col
@@ -299,7 +316,9 @@
                       fill-dot
                     >
                       <!-- CONTEUDO TIMELINE DE CADA ITEM -->
-
+                      <!-- <template v-slot:opposite>
+                        <v-card elevation="8"><v-card-text>TESTANDO</v-card-text></v-card>
+                      </template> -->
                       <v-card elevation="8" :disabled="!(i == stepCompliance)">
                         <v-card
                           rounded="0"
@@ -313,29 +332,27 @@
                           {{ item.title }}
                         </v-card>
                         <v-card-text class="bg-white text--primary text-center">
-                          <v-row v-if="i !== 2"
+                          <v-row
                             ><v-col
                               cols="12"
                               class="text-center"
                               v-for="picker in [
                                 {
-                                  title: 'Master Plan',
-                                  value: 'MP',
+                                  title: 'Previsto',
+                                  value: 'prev',
                                 },
                                 {
-                                  title: 'Previsão',
-                                  value: 'Prev',
+                                  title: 'Reprogramado',
+                                  value: 'reprog',
                                 },
                                 {
-                                  title: 'Efetiva',
+                                  title: 'Efetivo',
                                   value: 'Eff',
                                 },
                               ]"
                             >
                               <div
-                                v-if="
-                                  !(picker.title == 'Master Plan' && i == 0)
-                                "
+                                v-if="!(picker.title == 'Previsto' && i == 0)"
                               >
                                 <div class="text-overline">
                                   {{ picker.title }}
@@ -366,39 +383,42 @@
                               </div>
                             </v-col></v-row
                           >
-
-                          <v-row justify="center" v-if="i == 2"
-                            ><v-col class="text-center">
-                              <v-banner
-                                lines="one"
-                                icon="mdi-send-check"
-                                class="my-4"
-                              >
-                                <v-banner-text
-                                  ><p v-if="stepCompliance < 3">Aguardando</p>
-                                  <p v-else>Entregue!</p>
-                                </v-banner-text>
-
-                                <template v-slot:actions>
-                                  <v-btn
-                                    variant="outlined"
-                                    @click="stepCompliance++"
-                                    >Entregar</v-btn
-                                  >
-                                </template>
-                              </v-banner>
-                            </v-col></v-row
-                          >
+                          <div v-if="dataUpdates.reason && stepCompliance == i">
+                          <v-row justify="center"><v-col cols="12" class="text-center">
                           <v-btn
-                            v-if="i != 2"
-                            :color="prometeon"
-                            variant="outlined"
-                            width="100"
-                            class="mt-2"
-                            @click="stepCompliance++"
-                          >
-                            Ok
-                          </v-btn>
+                              color="green"
+                              class="mr-3"
+                              @click=""
+                              >Salvar</v-btn
+                            ><v-btn
+                              color="red"
+                              class="ml-3"
+                              @click=""
+                              >Cancelar</v-btn
+                            ></v-col></v-row>
+                            
+                          </div>
+                          <div v-else>
+                            <v-row justify="center"
+                              ><v-col cols="12" class="text-center"
+                                ><v-btn
+                                  color="orange"
+                                  class="mt-2 mx-2"
+                                  @click="showReason=true"
+                                >
+                                  Reprogramar
+                                </v-btn>
+                                <v-btn
+                                  :color="prometeon"
+                                  width="100"
+                                  class="mt-2 mx-2"
+                                  @click="stepCompliance++"
+                                >
+                                  Ok
+                                </v-btn></v-col
+                              ></v-row
+                            >
+                          </div>
                         </v-card-text>
                       </v-card>
                     </v-timeline-item>
@@ -473,73 +493,8 @@
 
     <!-- CREATE BOX -->
 
-    <!-- DEFINIÇÃO DO PRAZO MÁXIMO PARA ENVIO DO RELATÓRIO -->
-    <v-dialog v-model="showBoxReport" max-width="600">
-      <v-card>
-        <v-card-title class="text-center">Entrega do Relatório</v-card-title>
-        <v-card-text>
-          <v-row justify="center"
-            ><v-col cols="auto" class="text-center"
-              ><p>
-                Escolha uma data prevista que seja <br />
-                pelo menos 10 dias úteis dada a referência!
-              </p>
-              <n-date-picker
-                panel
-                type="date"
-                value-format="dd/MM/yyyy"
-                v-model:formatted-value="dateReport"
-                class="text-center date__picker" /></v-col
-          ></v-row>
-        </v-card-text>
-        <!-- SAVE BUTTON -->
-        <v-card-actions class="end__card__save">
-          <v-row justify="end" class="mx-3"
-            ><v-btn
-              color="white"
-              @click="this.finishAudit()"
-              :disabled="!dateReport"
-              >Salvar</v-btn
-            ></v-row
-          >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
-    <!-- DEFINIÇÃO DO DIA DA ENTREGA DO RELATÓRIO -->
-    <v-dialog v-model="showBoxReportDate" max-width="600">
-      <v-card>
-        <v-card-title class="text-center">Efetuação da Entrega</v-card-title>
-        <v-card-text>
-          <v-row justify="center"
-            ><v-col cols="auto" class="text-center">
-              <n-date-picker
-                panel
-                type="date"
-                value-format="dd/MM/yyyy"
-                v-model:formatted-value="dateReportReceive"
-                class="text-center date__picker" /></v-col
-            ><v-col v-if="daysRemaining < 0" cols="11" class="text-center"
-              ><p class="text-overline">Motivo do Atraso</p><v-text-field variant="outlined" label="Descreva o que ocasionou o atraso"></v-text-field
-            ></v-col>
-          </v-row>
-        </v-card-text>
-        <!-- SAVE BUTTON -->
-        <v-card-actions class="end__card__save">
-          <v-row justify="end" class="mx-3"
-            ><v-btn
-              color="white"
-              @click="showBoxReportDate = false"
-              :disabled="!dateReportReceive"
-              >Salvar</v-btn
-            ></v-row
-          >
-        </v-card-actions>
-      </v-card>
-    </v-dialog>
-
     <!-- CAIXA DE CRIAÇÃO DE AUDITORIA -->
-    <v-dialog v-model="showBoxAudit" max-width="800">
+    <v-dialog v-model="showBoxAudit" persistent max-width="800">
       <v-card>
         <v-card-title class="text-center">Auditoria</v-card-title>
         <v-card-text>
@@ -578,6 +533,7 @@
                 ><n-date-picker
                   panel
                   type="date"
+                  clearable
                   value-format="dd/MM/yyyy"
                   v-model:formatted-value="pickerDate"
                   class="text-center date__picker" /></v-row
@@ -588,6 +544,119 @@
         <v-card-actions class="end__card__save">
           <v-row justify="end" class="mx-3"
             ><v-btn color="white" @click="saveAudit()">Salvar</v-btn></v-row
+          >
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- DEFINIÇÃO DO PRAZO MÁXIMO PARA ENVIO DO RELATÓRIO -->
+    <v-dialog v-model="showBoxReport" persistent max-width="600">
+      <v-card>
+        <v-card-title class="text-center">Entrega do Relatório</v-card-title>
+        <v-card-text>
+          <v-row justify="center"
+            ><v-col cols="auto" class="text-center"
+              ><p>
+                Escolha uma data prevista que seja <br />
+                pelo menos 10 dias úteis após {{ auditDates.effectiveDate }}
+              </p>
+              <n-date-picker
+                panel
+                type="date"
+                clearable
+                :is-date-disabled="disablePastDates"
+                value-format="dd/MM/yyyy"
+                v-model:formatted-value="dateReport"
+                class="text-center date__picker" /></v-col
+          ></v-row>
+        </v-card-text>
+        <!-- SAVE BUTTON -->
+        <v-card-actions class="end__card__save">
+          <v-row justify="end" class="mx-3"
+            ><v-btn
+              color="white"
+              @click="finishAudit('audit')"
+              :disabled="!dateReport"
+              >Salvar</v-btn
+            ></v-row
+          >
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- ALTERAÇÃO DO PRAZO MÁXIMO PARA ENVIO DO RELATÓRIO -->
+    <v-dialog v-model="showBoxEditReport" persistent max-width="600">
+      <v-card>
+        <v-card-title class="text-center">Entrega do Relatório</v-card-title>
+        <v-card-text>
+          <v-row justify="center"
+            ><v-col cols="auto" class="text-center"
+              ><p>Escolha uma nova data</p>
+              <n-date-picker
+                panel
+                clearable
+                type="date"
+                value-format="dd/MM/yyyy"
+                :is-date-disabled="disablePastDates"
+                v-model:formatted-value="dateReport"
+                class="text-center date__picker" /></v-col
+            ><v-col cols="11" class="text-center"
+              ><p class="text-overline">Motivo do Reajuste</p>
+              <v-text-field
+                :disabled="!dateReport"
+                variant="outlined"
+                label="Descreva o porquê necessita de reajuste"
+                v-model="reasonEditReport"
+                @keydown.enter="showBoxEditReport = false"
+              ></v-text-field></v-col
+          ></v-row>
+        </v-card-text>
+        <!-- SAVE BUTTON -->
+        <v-card-actions class="end__card__save">
+          <v-row justify="end" class="mx-3"
+            ><v-btn
+              color="white"
+              @click="finishAudit('nonCompliance')"
+              :disabled="!reasonEditReport"
+              >Salvar</v-btn
+            ></v-row
+          >
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
+
+    <!-- DEFINIÇÃO DO DIA DA ENTREGA DO RELATÓRIO -->
+    <v-dialog v-model="showBoxReportDate" persistent max-width="600">
+      <v-card>
+        <v-card-title class="text-center">Efetuação da Entrega</v-card-title>
+        <v-card-text>
+          <v-row justify="center"
+            ><v-col cols="auto" class="text-center">
+              <n-date-picker
+                panel
+                type="date"
+                clearable
+                value-format="dd/MM/yyyy"
+                v-model:formatted-value="dateReportReceive"
+                class="text-center date__picker" /></v-col
+            ><v-col v-if="daysRemaining < 0" cols="11" class="text-center"
+              ><p class="text-overline">Motivo do Atraso</p>
+              <v-text-field
+                variant="outlined"
+                label="Descreva o que ocasionou o atraso"
+              ></v-text-field
+            ></v-col>
+          </v-row>
+        </v-card-text>
+        <!-- SAVE BUTTON -->
+        <v-card-actions class="end__card__save">
+          <v-row justify="end" class="mx-3"
+            ><v-btn
+              color="white"
+              @click="showBoxReportDate = false"
+              :disabled="!dateReportReceive"
+              >Salvar</v-btn
+            ></v-row
           >
         </v-card-actions>
       </v-card>
@@ -696,6 +765,8 @@ export default {
     stepCompliance: 0,
     showReason: false,
     showReasonReport: false,
+    showBoxEditReport: false,
+    reasonEditReport: null,
     prometeon: "#212b59",
     btnSave: false,
     reportFinished: false,
@@ -722,7 +793,6 @@ export default {
         value: "4",
         mpDate: "25/12/2021",
         description: "",
-        effectiveDate: "23/11/2023",
       },
       {
         name: "Production Planning",
@@ -749,14 +819,9 @@ export default {
         value: "deploy",
       },
       {
-        title: "Entrega de Evidência",
-        icon: "mdi-magnify",
-        value: "evidence",
-      },
-      {
         title: "Verificação da Eficácia",
         icon: "mdi-layers-triple",
-        value: "validate",
+        value: "validation",
       },
     ],
     areas: [
@@ -796,9 +861,46 @@ export default {
       },
     ],
     dataCompliance: [
-      { id: 1, name: "20230728#01Minor", priority: 2, description: "..." },
-      { id: 2, name: "20230728#02Minor", priority: 1, description: "..." },
-      { id: 3, name: "20230728#03Minor", priority: 3, description: "..." },
+        {
+          id: 1,
+          name: "20230728#01Minor",
+          priority: 2,
+          description: "...",
+          validation: "",
+          evidence: "",
+          deployment: "",
+          actionPlan: "",
+        },
+      //   {
+      //     id: 2,
+      //     name: "20230728#02Minor",
+      //     priority: 1,
+      //     description: "...",
+      //     validation: "",
+      //     evidence: "2",
+      //     deployment: "",
+      //     actionPlan: "",
+      //   },
+      //   {
+      //     id: 3,
+      //     name: "20230728#03Minor",
+      //     priority: 3,
+      //     description: "...",
+      //     validation: "",
+      //     evidence: "",
+      //     deployment: "3",
+      //     actionPlan: "",
+      //   },
+      //   {
+      //     id: 4,
+      //     name: "20230728#04Minor",
+      //     priority: 1,
+      //     description: "...",
+      //     validation: "",
+      //     evidence: "",
+      //     deployment: "",
+      //     actionPlan: "4",
+      //   },
     ],
     rowCompliance: null,
     shifts: ["1", "2", "3", "Administrativo"],
@@ -839,7 +941,10 @@ export default {
 
   methods: {
     disablePreviousDate(ts) {
-      return ts > Date.now();
+      if (this.pickerDisable.reprogDate) return ts >= Date.now();
+    },
+    disablePastDates(ts) {
+      return ts < Date.now();
     },
     openBoxAudit() {
       this.showBoxAudit = true;
@@ -849,7 +954,7 @@ export default {
     },
     saveAudit() {
       if (this.masterPlan) this.auditDialog["mpDate"] = this.pickerDate;
-      else this.auditDialog["prevDate"] = this.pickerDate;
+      else this.auditDialog["reprogDate"] = this.pickerDate;
       this.audits.push(this.auditDialog);
       this.auditDialog = {};
       this.showBoxAudit = false;
@@ -858,11 +963,12 @@ export default {
       if (action === "cancel") {
         this.dataUpdates.reason = null;
         this.showReason = !this.showReason;
-        this.pickerDisable.prevDate = true;
+        this.pickerDisable.reprogDate = true;
       }
       if (action === "save") {
         this.btnSave = !this.btnSave;
         this.showReason = !this.showReason;
+        this.pickerDisable.reprogDate = false;
       }
     },
     newCompliance() {
@@ -895,18 +1001,14 @@ export default {
       }
 
       function somarDias(dataString, days) {
-        // Divida a string em dia, mês e ano
         const [dia, mes, ano] = dataString.split("/");
 
-        // Crie um objeto Date
         const data = new Date(`${ano}-${mes}-${dia}`);
 
-        // Adicione 60 dias
         data.setDate(data.getDate() + days);
 
-        // Formate a nova data de volta para o formato desejado (dd/mm/yyyy)
         const diaNovo = String(data.getDate()).padStart(2, "0");
-        const mesNovo = String(data.getMonth() + 1).padStart(2, "0"); // Mês começa do zero
+        const mesNovo = String(data.getMonth() + 1).padStart(2, "0");
         const anoNovo = data.getFullYear();
 
         const novaDataString = `${diaNovo}/${mesNovo}/${anoNovo}`;
@@ -921,9 +1023,15 @@ export default {
       this.complianceDialog["name"] = name;
 
       if (this.complianceDialog.priority === 2)
-        this.complianceDialog["actionPlan"] = somarDias(dataFormatada[0], 20);
+        this.complianceDialog["actionPlan"] = somarDias(
+          this.dateReportReceive,
+          20
+        );
       else
-        this.complianceDialog["actionPlan"] = somarDias(dataFormatada[0], 60);
+        this.complianceDialog["actionPlan"] = somarDias(
+          this.dateReportReceive,
+          60
+        );
 
       this.dataCompliance.push(this.complianceDialog);
       this.showBoxCompliance = false;
@@ -958,7 +1066,7 @@ export default {
     },
     alternableBtn(button) {
       if (button === "reprogram") {
-        this.pickerDisable.prevDate = !this.pickerDisable.prevDate;
+        this.pickerDisable.reprogDate = !this.pickerDisable.reprogDate;
         this.showReason = !this.showReason;
       } else {
         this.btnSave = !this.btnSave;
@@ -973,7 +1081,7 @@ export default {
       if (button === "save") {
         if (this.btnSaveDict.call === "reprogram") {
           this.audit = { ...this.audit, ...this.auditDates };
-          this.pickerDisable.prevDate = true;
+          this.pickerDisable.reprogDate = true;
         } else {
           this.pickerDisable.effectiveDate = true;
           this.showBoxReport = true;
@@ -982,28 +1090,40 @@ export default {
 
       if (button === "cancel") {
         this.pickerDisable.effectiveDate = true;
-        this.pickerDisable.prevDate = true;
+        this.pickerDisable.reprogDate = true;
 
         this.auditDates.effectiveDate = null;
-        if (this.audit.prevDate) {
-          this.auditDates.prevDate = this.audit.prevDate;
-        } else this.auditDates.prevDate = null;
+        if (this.audit.reprogDate) {
+          this.auditDates.reprogDate = this.audit.reprogDate;
+        } else this.auditDates.reprogDate = null;
       }
     },
-    finishAudit() {
-      this.audit = { ...this.audit, ...this.auditDates };
-      this.daysRemaining = this.countdown(this.dateReport);
-      this.iconReport.icon = "clock-time-eight-outline";
-      this.iconReport.color = "black";
-      this.stepper = 1;
-      this.showBoxReport = false;
+    finishAudit(step) {
+      if (step === "audit") {
+        this.audit = { ...this.audit, ...this.auditDates };
+        this.daysRemaining = this.countdown(this.dateReport);
+        this.iconReport.icon = "clock-time-eight-outline";
+        this.iconReport.color = "black";
+        this.stepper = 1;
+        this.showBoxReport = false;
+      } else {
+        this.showBoxEditReport = false;
+        this.daysRemaining = this.countdown(this.dateReport);
+      }
     },
-    reportSubmitted() {
-      this.iconReport.color = "green";
-      this.iconReport.icon = "check-decagram-outline";
-      this.stepper = 2;
-      this.reportFinished = true;
-      this.showBoxReportDate = true;
+    reportSubmitted(action) {
+      if (action === "save") {
+        this.iconReport.color = "green";
+        this.iconReport.icon = "check-decagram-outline";
+        this.stepper = 2;
+        this.reportFinished = true;
+        this.showBoxReportDate = true;
+      } else {
+        this.showBoxEditReport = true;
+      }
+    },
+    setDateUpdate(reason, newDate, dateId) {
+      console.log(reason, newDate, dateId);
     },
     completedAudit() {
       this.stepper = 3;
@@ -1030,14 +1150,23 @@ export default {
       }
       this.comment = null;
     },
+    setStepTimeline(key) {
+      if (!key) {
+      } else if (this.dataCompliance[key - 1].validation)
+        this.stepCompliance = 3;
+      else if (this.dataCompliance[key - 1].evidence) this.stepCompliance = 2;
+      else if (this.dataCompliance[key - 1].deployment) this.stepCompliance = 1;
+      else if (this.dataCompliance[key - 1].actionPlan) this.stepCompliance = 0;
+    },
     clear() {
       this.reportFinished = false;
       this.daysRemaining = null;
       this.stepper = 0;
       this.dateReport = null;
+      this.dateReportReceive = null;
       this.btnSave = false;
       this.pickerDisable.effectiveDate = true;
-      this.pickerDisable.prevDate = true;
+      this.pickerDisable.reprogDate = true;
       this.tabAuditView = 0;
     },
   },
@@ -1055,9 +1184,9 @@ export default {
             if (key === "name") {
               this.clear();
 
-              if (this.audit.prevDate)
-                this.auditDates = { prevDate: this.audit.prevDate };
-              else this.auditDates = { prevDate: null };
+              if (this.audit.reprogDate)
+                this.auditDates = { reprogDate: this.audit.reprogDate };
+              else this.auditDates = { reprogDate: null };
 
               if (this.audit.effectiveDate) {
                 this.auditDates = { effectiveDate: this.audit.effectiveDate };
@@ -1088,16 +1217,6 @@ export default {
       if (this.auditDialog.mp) {
         this.auditDates.mpDate = this.auditDialog.mp;
       }
-    },
-    rowCompliance() {
-      if (this.dataCompliance[this.rowCompliance - 1].validate)
-        this.stepCompliance = 3;
-      else if (this.dataCompliance[this.rowCompliance - 1].evidence)
-        this.stepCompliance = 2;
-      else if (this.dataCompliance[this.rowCompliance - 1].deployment)
-        this.stepCompliance = 1;
-      else if (this.dataCompliance[this.rowCompliance - 1].actionPlan)
-        this.stepCompliance = 0;
     },
     showBoxAudit() {
       if (!this.showBoxAudit) this.masterPlan = false;
