@@ -110,6 +110,7 @@
                             type="date"
                             clearable
                             value-format="dd/MM/yyyy"
+                            format="dd/MM/yyyy"
                             size="large"
                             :disabled="pickerDisable[d['value'] + type.value]"
                             placeholder="Selecione uma data" /></v-col
@@ -118,35 +119,35 @@
                   </v-row>
                 </v-col>
                 <v-col class="text-center"
-                  ><div v-if="!btnSave && !audit.effectiveDate">
+                  ><div v-if="!btnSaveAudit && !audit.effectiveDate">
                     <v-btn
-                      color="orange"
+                      color="#b55921"
                       class="mr-3"
-                      @click="alternableBtn('reprogram')"
+                      @click="alternableBtnAudit('reprogram')"
                       >Reprogramar</v-btn
                     ><v-btn
                       color="green"
                       class="ml-3"
-                      @click="alternableBtn('finishAudit')"
+                      @click="alternableBtnAudit('finishAudit')"
                       >Concluir</v-btn
                     >
                   </div>
-                  <div v-if="btnSave && !audit.effectiveDate">
+                  <div v-if="btnSaveAudit && !audit.effectiveDate">
                     <v-btn
                       color="green"
                       class="mr-3"
                       :disabled="
                         (auditDates.reprogDate == audit.reprogDate &&
-                          btnSaveDict.call == 'reprogram') ||
+                          btnSaveAuditDict.call == 'reprogram') ||
                         (auditDates.effectiveDate == null &&
-                          btnSaveDict.call == 'finishAudit')
+                          btnSaveAuditDict.call == 'finishAudit')
                       "
-                      @click="alternableBtn('save')"
+                      @click="alternableBtnAudit('save')"
                       >Salvar</v-btn
                     ><v-btn
                       color="red"
                       class="ml-3"
-                      @click="alternableBtn('cancel')"
+                      @click="alternableBtnAudit('cancel')"
                       >Cancelar</v-btn
                     >
                   </div></v-col
@@ -159,7 +160,12 @@
             <!-- TABS RELATÓRIO E NÃO CONFORMIDADES -->
 
             <v-tabs v-model="tabAuditView" :bg-color="prometeon" grow>
-              <v-tab v-for="n in tabContent" :key="n" :value="n.value">
+              <v-tab
+                v-for="n in tabContent"
+                :key="n"
+                :value="n.value"
+                :disabled="n.value == 1 && !reportFinished"
+              >
                 {{ n.name }}
               </v-tab>
             </v-tabs>
@@ -230,7 +236,7 @@
                       class="text-center"
                       ><v-btn
                         :disabled="!dateReport"
-                        color="orange"
+                        color="#b55921"
                         class="mr-3"
                         @click="reportSubmitted('reprog')"
                         >Reprogramar</v-btn
@@ -281,9 +287,6 @@
                       :id="['id']"
                       :height="false"
                       selectable
-                      :on-update:checked-row-keys="
-                        setStepTimeline(rowCompliance)
-                      "
                       v-model="rowCompliance"
                     >
                     </p-data-table></v-col
@@ -306,7 +309,11 @@
                     >
                   </v-card>
 
-                  <v-timeline align="start">
+                  <v-timeline
+                    align="start"
+                    data-aos="fade-up"
+                    data-aos-duration="1000"
+                  >
                     <v-timeline-item
                       v-for="(item, i) in timelineItems"
                       :key="i"
@@ -316,9 +323,57 @@
                       fill-dot
                     >
                       <!-- CONTEUDO TIMELINE DE CADA ITEM -->
-                      <!-- <template v-slot:opposite>
-                        <v-card elevation="8"><v-card-text>TESTANDO</v-card-text></v-card>
-                      </template> -->
+                      <template v-slot:opposite v-if="i <= 1">
+                        <v-card
+                          elevation="8"
+                          width="450"
+                          :disabled="!(i == stepCompliance)"
+                        >
+                          <v-card
+                            rounded="0"
+                            :class="[
+                              'text-h6',
+                              'timeline__opossitive',
+                              'text-center',
+                              'pa-2',
+                            ]"
+                          >
+                            {{ item.textOppositive }}
+                          </v-card>
+
+                          <v-card-text v-if="item.title == 'Plano de Ação'">
+                            <v-row justify="center">
+                              <v-col cols="10">
+                                <v-select
+                                  :items="lideres"
+                                  label="Selecionar Líder"
+                                  variant="underlined"
+                                ></v-select>
+                              </v-col>
+
+                              <v-col cols="10">
+                                <v-select
+                                  :items="monitores"
+                                  label="Selecionar Monitor"
+                                  variant="underlined"
+                                ></v-select>
+                              </v-col>
+                            </v-row>
+                          </v-card-text>
+                          <v-card-text v-else>
+                            <v-row justify="center">
+                              <v-col cols="10">
+                                <v-select
+                                  :items="lideres"
+                                  label="Selecionar Responsáveis"
+                                  variant="underlined"
+                                  multiple
+                                ></v-select>
+                              </v-col>
+                            </v-row>
+                          </v-card-text>
+                        </v-card>
+                      </template>
                       <v-card elevation="8" :disabled="!(i == stepCompliance)">
                         <v-card
                           rounded="0"
@@ -339,11 +394,11 @@
                               v-for="picker in [
                                 {
                                   title: 'Previsto',
-                                  value: 'prev',
+                                  value: 'Prev',
                                 },
                                 {
                                   title: 'Reprogramado',
-                                  value: 'reprog',
+                                  value: 'Reprog',
                                 },
                                 {
                                   title: 'Efetivo',
@@ -366,6 +421,14 @@
                                       item['value'] + picker.value
                                     ]
                                   "
+                                  format="dd/MM/yyyy"
+                                  clearable
+                                  :disabled="
+                                    stepCompliance == i &&
+                                    timelineDisabledData[
+                                      item['value'] + picker.value
+                                    ]
+                                  "
                                   class="text-center date__picker"
                                 />
                               </div>
@@ -373,7 +436,7 @@
                                 v-else
                                 class="card__plan bg-indigo-lighten-5"
                               >
-                                <v-card-title> Agendado </v-card-title>
+                                <v-card-title> Previsão </v-card-title>
                                 <v-divider class="mx-6"></v-divider>
                                 <v-row justify="center"
                                   ><v-col class="text-center text-h6 my-3">{{
@@ -383,38 +446,75 @@
                               </div>
                             </v-col></v-row
                           >
-                          <div v-if="dataUpdates.reason && stepCompliance == i">
-                          <v-row justify="center"><v-col cols="12" class="text-center">
-                          <v-btn
-                              color="green"
-                              class="mr-3"
-                              @click=""
-                              >Salvar</v-btn
-                            ><v-btn
-                              color="red"
-                              class="ml-3"
-                              @click=""
-                              >Cancelar</v-btn
-                            ></v-col></v-row>
-                            
+                          <div v-if="btnSaveCompliance && stepCompliance == i">
+                            <v-row justify="center"
+                              ><v-col cols="12" class="text-center">
+                                <v-btn
+                                  color="green"
+                                  :disabled="
+                                    btnSaveComplianceDict.call &&
+                                    !complianceDates[
+                                      item.value + btnSaveComplianceDict.call
+                                    ]
+                                  "
+                                  class="mr-3"
+                                  @click="
+                                    alternableBtnCompliance(
+                                      'Save',
+                                      item['value']
+                                    )
+                                  "
+                                  >Salvar</v-btn
+                                ><v-btn
+                                  color="red"
+                                  :disabled="btnSaveComplianceDict.disabled"
+                                  class="ml-3"
+                                  @click="
+                                    alternableBtnCompliance(
+                                      'Cancel',
+                                      item['value']
+                                    )
+                                  "
+                                  >Cancelar</v-btn
+                                ></v-col
+                              ></v-row
+                            >
                           </div>
                           <div v-else>
                             <v-row justify="center"
                               ><v-col cols="12" class="text-center"
                                 ><v-btn
-                                  color="orange"
+                                  color="#b55921"
                                   class="mt-2 mx-2"
-                                  @click="showReason=true"
+                                  :disabled="
+                                    !complianceDates[item['value'] + 'Prev'] &&
+                                    stepCompliance > 0
+                                  "
+                                  @click="
+                                    alternableBtnCompliance(
+                                      'Reprog',
+                                      item['value']
+                                    )
+                                  "
                                 >
                                   Reprogramar
                                 </v-btn>
                                 <v-btn
                                   :color="prometeon"
-                                  width="100"
+                                  width="120"
+                                  :disabled="
+                                    !complianceDates[item['value'] + 'Prev'] &&
+                                    stepCompliance > 0
+                                  "
                                   class="mt-2 mx-2"
-                                  @click="stepCompliance++"
+                                  @click="
+                                    alternableBtnCompliance(
+                                      'Eff',
+                                      item['value']
+                                    )
+                                  "
                                 >
-                                  Ok
+                                  Concluir
                                 </v-btn></v-col
                               ></v-row
                             >
@@ -452,6 +552,10 @@
                           <n-grid :y-gap="8" :cols="1">
                             <n-grid-item v-for="item in comments">
                               <div
+                                @click="selectComment(item)"
+                                :class="{
+                                  'selected-comment': selectedComment === item,
+                                }"
                                 class="box text-center d-flex justify-center align-center"
                               >
                                 <v-row justify="center"
@@ -534,6 +638,7 @@
                   panel
                   type="date"
                   clearable
+                  format="dd/MM/yyyy"
                   value-format="dd/MM/yyyy"
                   v-model:formatted-value="pickerDate"
                   class="text-center date__picker" /></v-row
@@ -564,6 +669,7 @@
                 panel
                 type="date"
                 clearable
+                format="dd/MM/yyyy"
                 :is-date-disabled="disablePastDates"
                 value-format="dd/MM/yyyy"
                 v-model:formatted-value="dateReport"
@@ -596,6 +702,7 @@
                 panel
                 clearable
                 type="date"
+                format="dd/MM/yyyy"
                 value-format="dd/MM/yyyy"
                 :is-date-disabled="disablePastDates"
                 v-model:formatted-value="dateReport"
@@ -636,6 +743,7 @@
                 panel
                 type="date"
                 clearable
+                format="dd/MM/yyyy"
                 value-format="dd/MM/yyyy"
                 v-model:formatted-value="dateReportReceive"
                 class="text-center date__picker" /></v-col
@@ -714,10 +822,10 @@
           label="Descreva a razão da reprogramação"
         ></v-textarea>
         <v-row justify="space-around">
-          <v-btn @click="reason('cancel')" width="45%" color="red"
+          <v-btn @click="reason('cancel', secondReason)" width="45%" color="red"
             >Cancelar</v-btn
           ><v-btn
-            @click="reason('save')"
+            @click="reason('save', secondReason)"
             width="45%"
             :disabled="!dataUpdates.reason"
             :color="prometeon"
@@ -761,14 +869,20 @@ import "aos/dist/aos.css";
 AOS.init();
 export default {
   data: () => ({
+    selectedComment: null,
     dataUpdates: {},
+    dates: {},
     stepCompliance: 0,
+    secondReason: null,
     showReason: false,
     showReasonReport: false,
     showBoxEditReport: false,
     reasonEditReport: null,
     prometeon: "#212b59",
-    btnSave: false,
+    btnSaveAudit: false,
+    btnSaveAuditDict: {},
+    btnSaveCompliance: false,
+    btnSaveComplianceDict: {},
     reportFinished: false,
     stepper: 0,
     dateReport: null,
@@ -787,6 +901,8 @@ export default {
     complianceDates: {},
     auditDialog: {},
     complianceDialog: {},
+    lideres: ["Tarcis", "Maju"],
+    monitores: ["Anderson", "Lucas"],
     audits: [
       {
         name: "Procurement",
@@ -804,18 +920,21 @@ export default {
         name: "QMS",
         value: "6",
         mpDate: "08/11/2022",
+        effectiveDate: "06/12/2023",
         description: "",
       },
     ],
     timelineItems: [
       {
         title: "Plano de Ação",
+        textOppositive: "Seleção de Líder e Monitor",
         icon: "mdi-note",
         value: "action",
       },
       {
         title: "Implementação",
         icon: "mdi-arrow-up-bold-outline",
+        textOppositive: "Seleção dos Responsáveis",
         value: "deploy",
       },
       {
@@ -824,6 +943,14 @@ export default {
         value: "validation",
       },
     ],
+    timelineDisabledData: {
+      actionReprog: true,
+      actionEff: true,
+      deployReprog: true,
+      deployEff: true,
+      validationEff: true,
+      validationReprog: true,
+    },
     areas: [
       "OE Sales",
       "PMS",
@@ -861,46 +988,16 @@ export default {
       },
     ],
     dataCompliance: [
-        {
-          id: 1,
-          name: "20230728#01Minor",
-          priority: 2,
-          description: "...",
-          validation: "",
-          evidence: "",
-          deployment: "",
-          actionPlan: "",
-        },
-      //   {
-      //     id: 2,
-      //     name: "20230728#02Minor",
-      //     priority: 1,
-      //     description: "...",
-      //     validation: "",
-      //     evidence: "2",
-      //     deployment: "",
-      //     actionPlan: "",
-      //   },
-      //   {
-      //     id: 3,
-      //     name: "20230728#03Minor",
-      //     priority: 3,
-      //     description: "...",
-      //     validation: "",
-      //     evidence: "",
-      //     deployment: "3",
-      //     actionPlan: "",
-      //   },
-      //   {
-      //     id: 4,
-      //     name: "20230728#04Minor",
-      //     priority: 1,
-      //     description: "...",
-      //     validation: "",
-      //     evidence: "",
-      //     deployment: "",
-      //     actionPlan: "4",
-      //   },
+      {
+        id: 1,
+        name: "20230728#01Minor",
+        priority: 2,
+        description: "...",
+        validation: "",
+        evidence: "",
+        deployment: "",
+        actionPlan: "",
+      },
     ],
     rowCompliance: null,
     shifts: ["1", "2", "3", "Administrativo"],
@@ -936,10 +1033,12 @@ export default {
       },
     ],
     iconReport: {},
-    btnSaveDict: {},
   }),
 
   methods: {
+    selectComment(comment) {
+      this.selectedComment = comment;
+    },
     disablePreviousDate(ts) {
       if (this.pickerDisable.reprogDate) return ts >= Date.now();
     },
@@ -959,16 +1058,24 @@ export default {
       this.auditDialog = {};
       this.showBoxAudit = false;
     },
-    reason(action) {
+    reason(action, session) {
       if (action === "cancel") {
+        if (session === "audit") {
+          this.pickerDisable.reprogDate = true;
+        } else {
+          this.timelineDisabledData.actionReprog = true;
+          this.btnSaveCompliance = false;
+        }
         this.dataUpdates.reason = null;
         this.showReason = !this.showReason;
-        this.pickerDisable.reprogDate = true;
       }
       if (action === "save") {
-        this.btnSave = !this.btnSave;
+        if (session === "audit") {
+          this.btnSaveAudit = !this.btnSaveAudit;
+          this.pickerDisable.reprogDate = false;
+        }
+
         this.showReason = !this.showReason;
-        this.pickerDisable.reprogDate = false;
       }
     },
     newCompliance() {
@@ -1064,22 +1171,23 @@ export default {
       );
       return diferencaEmDias;
     },
-    alternableBtn(button) {
+    alternableBtnAudit(button) {
       if (button === "reprogram") {
         this.pickerDisable.reprogDate = !this.pickerDisable.reprogDate;
+        this.secondReason = "audit";
         this.showReason = !this.showReason;
       } else {
-        this.btnSave = !this.btnSave;
+        this.btnSaveAudit = !this.btnSaveAudit;
       }
       if (button === "finishAudit")
         this.pickerDisable.effectiveDate = !this.pickerDisable.effectiveDate;
 
       if (button != "cancel" && button != "save") {
-        this.btnSaveDict["call"] = button;
+        this.btnSaveAuditDict["call"] = button;
       }
 
       if (button === "save") {
-        if (this.btnSaveDict.call === "reprogram") {
+        if (this.btnSaveAuditDict.call === "reprogram") {
           this.audit = { ...this.audit, ...this.auditDates };
           this.pickerDisable.reprogDate = true;
         } else {
@@ -1097,6 +1205,44 @@ export default {
           this.auditDates.reprogDate = this.audit.reprogDate;
         } else this.auditDates.reprogDate = null;
       }
+    },
+    alternableBtnCompliance(button, position, cancel = ["Reprog", "Eff"]) {
+      var saveFieldCompliance = null;
+      if (button === "Reprog" || button === "Eff") {
+        this.btnSaveComplianceDict["call"] = button;
+        this.btnSaveComplianceDict["field"] = position + button;
+      }
+      if (this.stepCompliance == 0) saveFieldCompliance = "actionPlan";
+      else if (this.stepCompliance == 1) saveFieldCompliance = "deployment";
+      else if (this.stepCompliance == 2) saveFieldCompliance = "validation";
+
+      var date = this.btnSaveComplianceDict.field;
+      var disable = position + button;
+
+      this.timelineDisabledData[disable] = !this.timelineDisabledData[disable];
+
+      if (button === "Reprog") {
+        this.secondReason = "compliance";
+        this.showReason = true;
+        this.dataUpdates.reason = null;
+      }
+      if (button === "Save") {
+        if (this.btnSaveComplianceDict["call"] == "Reprog")
+          this.dataUpdates.newDate = this.complianceDates[date];
+        if (this.btnSaveComplianceDict["call"] == "Eff") {
+          this.dataCompliance[this.rowCompliance - 1][saveFieldCompliance] =
+            this.complianceDates[date];
+          this.stepCompliance++;
+        }
+
+        this.timelineDisabledData[position + cancel[0]] = true;
+        this.timelineDisabledData[position + cancel[1]] = true;
+      }
+      if (button === "Cancel") {
+        this.timelineDisabledData[position + cancel[0]] = true;
+        this.timelineDisabledData[position + cancel[1]] = true;
+      }
+      this.btnSaveCompliance = !this.btnSaveCompliance;
     },
     finishAudit(step) {
       if (step === "audit") {
@@ -1150,13 +1296,13 @@ export default {
       }
       this.comment = null;
     },
-    setStepTimeline(key) {
-      if (!key) {
-      } else if (this.dataCompliance[key - 1].validation)
-        this.stepCompliance = 3;
-      else if (this.dataCompliance[key - 1].evidence) this.stepCompliance = 2;
-      else if (this.dataCompliance[key - 1].deployment) this.stepCompliance = 1;
-      else if (this.dataCompliance[key - 1].actionPlan) this.stepCompliance = 0;
+    setStep(rowCompliance) {
+      if (this.dataCompliance[rowCompliance - 1].actionPlan)
+        this.stepCompliance = 0;
+      if (this.dataCompliance[rowCompliance - 1].deployment)
+        this.stepCompliance = 1;
+      if (this.dataCompliance[rowCompliance - 1].validation)
+        this.stepCompliance = 2;
     },
     clear() {
       this.reportFinished = false;
@@ -1164,7 +1310,7 @@ export default {
       this.stepper = 0;
       this.dateReport = null;
       this.dateReportReceive = null;
-      this.btnSave = false;
+      this.btnSaveAudit = false;
       this.pickerDisable.effectiveDate = true;
       this.pickerDisable.reprogDate = true;
       this.tabAuditView = 0;
@@ -1221,10 +1367,25 @@ export default {
     showBoxAudit() {
       if (!this.showBoxAudit) this.masterPlan = false;
     },
+    rowCompliance() {
+      if (this.rowCompliance) this.setStep(this.rowCompliance);
+    },
+    complianceDates: {
+      handler(newDict, oldDict) {
+        if (newDict.deployPrev) this.timelineDisabledData.deployPrev = true;
+        if (newDict.validationPrev)
+          this.timelineDisabledData.validationPrev = true;
+      },
+      deep: true,
+    },
   },
 };
 </script>
 <style scoped>
+.selected-comment {
+  background-color: #cfd8dc !important;
+}
+
 .progress {
   color: #000;
 }
@@ -1251,12 +1412,21 @@ export default {
   border-radius: 5px;
 }
 
+.box:hover {
+  cursor: pointer;
+}
+
 .card__content {
   border-left: 1px solid #949393;
 }
 
 .timeline {
   background-color: #212b59;
+  color: white;
+}
+
+.timeline__opossitive {
+  background-color: #59a2b5;
   color: white;
 }
 
