@@ -29,7 +29,7 @@
       <v-card flat width="100vw" class="card__content" rounded="0">
         <!-- STEPS DA SITUAÇÃO ATUAL DA AUDITORIA -->
 
-        <v-stepper rounded="0" :model-value="stepper">
+        <v-stepper rounded="0" :model-value="stepper" flat>
           <v-stepper-header>
             <v-stepper-item
               :complete="stepper > 0 ? true : false"
@@ -63,27 +63,36 @@
         <v-card-text>
           <!-- DATA PREVISTA -->
 
-          <v-row justify="space-around" class="my-3"
-            ><v-col
-              cols="3"
-              class="d-flex justify-center flex-columns align-center text-center"
-              ><v-card class="pa-10" elevation="14"
-                ><p class="text-h6 font-weight-bold">Previsto</p>
-                <v-divider></v-divider
-                ><n-statistic :value="audit.mpDate" class="text-center">
-                  <template #prefix
-                    ><v-icon
-                      v-if="!audit.mpDate"
-                      icon="mdi-calendar-alert"
-                    ></v-icon></template></n-statistic></v-card
-            ></v-col>
+          <v-row justify="center" class="my-3"
+            ><v-col cols="12" class="d-flex justify-center text-center">
+              <v-card class="pa-7 mx-2" variant="outlined"
+                ><v-row
+                  ><v-col cols="auto"
+                    ><p class="text-h6 font-weight-bold">Planejado</p>
+                    <v-divider></v-divider
+                    ><n-statistic :value="audit.prevDate" class="text-center">
+                    </n-statistic></v-col
+                ></v-row>
+              </v-card>
+              <v-card class="pa-7 mx-2" variant="outlined"
+                ><p class="text-h6 font-weight-bold">Turnos</p>
+                <v-divider></v-divider>
+                <n-statistic>
+                  {{
+                    audit && Array.isArray(audit.shift)
+                      ? audit.shift.join(", ")
+                      : ""
+                  }}
+                </n-statistic>
+              </v-card>
+            </v-col>
 
-            <v-divider vertical></v-divider>
+            <v-divider></v-divider>
 
             <!-- DATE PICKER AND BUTTONS -->
             <v-col
               ><v-row justify="center"
-                ><v-col cols="12">
+                ><v-col cols="12" class="text-center">
                   <v-row
                     justify="center"
                     v-for="type in [{ text: 'Data', value: 'Date' }]"
@@ -156,7 +165,7 @@
             >
           </v-row>
 
-          <v-card elevation="4">
+          <v-card>
             <!-- TABS RELATÓRIO E NÃO CONFORMIDADES -->
 
             <v-tabs v-model="tabAuditView" :bg-color="prometeon" grow>
@@ -230,10 +239,7 @@
                         :color="iconReport.color"
                       ></v-icon
                     ></v-col>
-                    <v-col
-                      v-if="!dateReportReceive"
-                      cols="12"
-                      class="text-center"
+                    <v-col v-if="stepper < 2" cols="12" class="text-center"
                       ><v-btn
                         :disabled="!dateReport"
                         color="#b55921"
@@ -245,7 +251,7 @@
                         :disabled="
                           !this.audit.effectiveDate || this.reportFinished
                         "
-                        @click="reportSubmitted('save')"
+                        @click="reportSubmitted('send')"
                         >Entregar</v-btn
                       ></v-col
                     ><v-col v-else cols="12" class="text-center"
@@ -319,15 +325,14 @@
                       :key="i"
                       :dot-color="i < stepCompliance ? 'green' : prometeon"
                       :icon="item.icon"
-                      width="450"
                       fill-dot
                     >
                       <!-- CONTEUDO TIMELINE DE CADA ITEM -->
                       <template v-slot:opposite v-if="i <= 1">
                         <v-card
                           elevation="8"
-                          width="450"
                           :disabled="!(i == stepCompliance)"
+                          width="350"
                         >
                           <v-card
                             rounded="0"
@@ -342,39 +347,33 @@
                           </v-card>
 
                           <v-card-text v-if="item.title == 'Plano de Ação'">
-                            <v-row justify="center">
-                              <v-col cols="10">
-                                <v-select
-                                  :items="lideres"
-                                  label="Selecionar Líder"
-                                  variant="underlined"
-                                ></v-select>
-                              </v-col>
+                            <v-select
+                              :items="lideres"
+                              label="Selecionar Líder"
+                              variant="underlined"
+                            ></v-select>
 
-                              <v-col cols="10">
-                                <v-select
-                                  :items="monitores"
-                                  label="Selecionar Monitor"
-                                  variant="underlined"
-                                ></v-select>
-                              </v-col>
-                            </v-row>
+                            <v-select
+                              :items="monitores"
+                              label="Selecionar Monitor"
+                              variant="underlined"
+                            ></v-select>
                           </v-card-text>
                           <v-card-text v-else>
-                            <v-row justify="center">
-                              <v-col cols="10">
-                                <v-select
-                                  :items="lideres"
-                                  label="Selecionar Responsáveis"
-                                  variant="underlined"
-                                  multiple
-                                ></v-select>
-                              </v-col>
-                            </v-row>
+                            <v-select
+                              :items="lideres"
+                              label="Selecionar Responsáveis"
+                              variant="underlined"
+                              multiple
+                            ></v-select>
                           </v-card-text>
                         </v-card>
                       </template>
-                      <v-card elevation="8" :disabled="!(i == stepCompliance)">
+                      <v-card
+                        elevation="8"
+                        :disabled="!(i == stepCompliance)"
+                        width="350"
+                      >
                         <v-card
                           rounded="0"
                           :class="[
@@ -421,6 +420,7 @@
                                       item['value'] + picker.value
                                     ]
                                   "
+                                  :is-date-disabled="disablePreviousDate"
                                   format="dd/MM/yyyy"
                                   clearable
                                   :disabled="
@@ -541,18 +541,18 @@
                     >
                       Comentários</v-btn
                     >
-                    <n-drawer v-model:show="showDrawer" width="30vw">
+                    <n-drawer v-model:show="showDrawer" width="40vw">
                       <n-drawer-content
                         title="Comentários"
                         :native-scrollbar="false"
                         closable
                         trigger="none"
                       >
-                        <div id="comments-container">
+                        <div id="comments__container">
                           <n-grid :y-gap="8" :cols="1">
                             <n-grid-item v-for="item in comments">
                               <div
-                                @click="selectComment(item)"
+                                @click="toggleCommentSelection(item)"
                                 :class="{
                                   'selected-comment': selectedComment === item,
                                 }"
@@ -571,6 +571,15 @@
                                   <v-divider class="mx-3"></v-divider>
                                   <v-col>{{ item.comment }}</v-col>
                                 </v-row>
+                              </div>
+                              <div>
+                                <v-btn
+                                  v-if="selectComment(item)"
+                                  @click="deleteComment(item)"
+                                  icon
+                                >
+                                  <v-icon color="red">mdi-delete</v-icon>
+                                </v-btn>
                               </div>
                             </n-grid-item>
                           </n-grid>
@@ -617,39 +626,52 @@
               <!-- SELECIONAR TURNO -->
               <v-select
                 v-model="auditDialog.shift"
+                :disabled="!auditDialog.name"
                 :items="shifts"
                 multiple
                 variant="outlined"
                 label="Escolha uma turno"
                 class="select__box"
               ></v-select>
-              <!-- MASTER PLAN -->
-              <v-checkbox
-                v-model="masterPlan"
-                label="Master Plan"
-                color="green-darken-2"
-                :value="true"
-              ></v-checkbox></v-col
+              <!-- MASTER PLAN --> </v-col
             ><v-divider vertical></v-divider>
             <!-- DATE PICKER -->
             <v-col cols="6" class="text-center"
-              ><v-row justify="center"
-                ><n-date-picker
-                  panel
-                  type="date"
-                  clearable
-                  format="dd/MM/yyyy"
-                  value-format="dd/MM/yyyy"
-                  v-model:formatted-value="pickerDate"
-                  class="text-center date__picker" /></v-row
+              ><v-card
+                :disabled="
+                  auditDialog.shift ? !auditDialog.shift.length > 0 : true
+                "
+                variant="flat"
+                ><v-row justify="center"
+                  ><v-col cols="auto" class="text-center"
+                    ><n-date-picker
+                      panel
+                      type="date"
+                      clearable
+                      format="dd/MM/yyyy"
+                      value-format="dd/MM/yyyy"
+                      v-model:formatted-value="pickerDate"
+                      class="text-center date__picker" /></v-col></v-row></v-card
             ></v-col>
           </v-row>
         </v-card-text>
         <!-- SAVE BUTTON -->
         <v-card-actions class="end__card__save">
-          <v-row justify="end" class="mx-3"
-            ><v-btn color="white" @click="saveAudit()">Salvar</v-btn></v-row
-          >
+          <v-row justify="end" class="mx-3">
+            <v-btn color="red" @click="showBoxAudit = false">Cancelar</v-btn>
+            <v-btn
+              color="white"
+              :disabled="
+                auditDialog.shift
+                  ? auditDialog.shift.length > 0
+                    ? !pickerDate
+                    : true
+                  : true
+              "
+              @click="saveAudit()"
+              >Salvar</v-btn
+            >
+          </v-row>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -690,14 +712,13 @@
       </v-card>
     </v-dialog>
 
-    <!-- ALTERAÇÃO DO PRAZO MÁXIMO PARA ENVIO DO RELATÓRIO -->
+    <!-- ALTERAÇÃO DO PRAZO MÁXIMO PARA ENVIO DO RELATÓRIO E AUDITORIA -->
     <v-dialog v-model="showBoxEditReport" persistent max-width="600">
       <v-card>
         <v-card-title class="text-center">Entrega do Relatório</v-card-title>
         <v-card-text>
-          <v-row justify="center"
-            ><v-col cols="auto" class="text-center"
-              ><p>Escolha uma nova data</p>
+          <v-row justify="center" no-gutters
+            ><v-col cols="auto" class="text-center">
               <n-date-picker
                 panel
                 clearable
@@ -732,7 +753,7 @@
       </v-card>
     </v-dialog>
 
-    <!-- DEFINIÇÃO DO DIA DA ENTREGA DO RELATÓRIO -->
+    <!-- DEFINIÇÃO DO DIA DA ENTREGA DO RELATÓRIO COM/SEM JUSTIFICATIVA DE ATRASO-->
     <v-dialog v-model="showBoxReportDate" persistent max-width="600">
       <v-card>
         <v-card-title class="text-center">Efetuação da Entrega</v-card-title>
@@ -758,14 +779,17 @@
         </v-card-text>
         <!-- SAVE BUTTON -->
         <v-card-actions class="end__card__save">
-          <v-row justify="end" class="mx-3"
-            ><v-btn
+          <v-row justify="end" class="mx-3">
+            <v-btn color="red" @click="showBoxReportDate = false"
+              >Cancelar</v-btn
+            >
+            <v-btn
               color="white"
-              @click="showBoxReportDate = false"
+              @click="reportSubmitted('save')"
               :disabled="!dateReportReceive"
               >Salvar</v-btn
-            ></v-row
-          >
+            >
+          </v-row>
         </v-card-actions>
       </v-card>
     </v-dialog>
@@ -834,39 +858,12 @@
         >
       </n-card>
     </n-modal>
-
-    <!-- CAIXA DE JUSTIFICATIVA DE ATRASO DO RELATÓRIO -->
-    <n-modal v-model:show="showReasonReport" :mask-closable="false">
-      <n-card
-        title="Motivo do Atraso"
-        :bordered="false"
-        size="huge"
-        role="dialog"
-        aria-modal="true"
-        style="width: 600px"
-      >
-        <v-textarea
-          variant="outlined"
-          v-model="reasonReport"
-          label="Descreva o que levou ao atraso!"
-        ></v-textarea>
-        <v-row justify="space-around">
-          <v-btn
-            @click="showReasonReport = false"
-            width="95%"
-            :disabled="!reasonReport"
-            :color="prometeon"
-            >Salvar</v-btn
-          ></v-row
-        >
-      </n-card>
-    </n-modal>
   </v-card>
 </template>
 <script>
 import AOS from "aos";
 import "aos/dist/aos.css";
-AOS.init();
+AOS.init({ once: true });
 export default {
   data: () => ({
     selectedComment: null,
@@ -875,7 +872,6 @@ export default {
     stepCompliance: 0,
     secondReason: null,
     showReason: false,
-    showReasonReport: false,
     showBoxEditReport: false,
     reasonEditReport: null,
     prometeon: "#212b59",
@@ -907,19 +903,19 @@ export default {
       {
         name: "Procurement",
         value: "4",
-        mpDate: "25/12/2021",
+        prevDate: "25/12/2021",
         description: "",
       },
       {
         name: "Production Planning",
         value: "5",
-        mpDate: "03/09/2023",
+        prevDate: "03/09/2023",
         description: "",
       },
       {
         name: "QMS",
         value: "6",
-        mpDate: "08/11/2022",
+        prevDate: "08/11/2022",
         effectiveDate: "06/12/2023",
         description: "",
       },
@@ -946,8 +942,10 @@ export default {
     timelineDisabledData: {
       actionReprog: true,
       actionEff: true,
+      deployPrev: false,
       deployReprog: true,
       deployEff: true,
+      validationPrev: false,
       validationEff: true,
       validationReprog: true,
     },
@@ -1036,11 +1034,32 @@ export default {
   }),
 
   methods: {
+    toggleCommentSelection(comment) {
+      if (this.selectComment(comment)) {
+        this.selectedComment = null;
+      } else {
+        this.selectedComment = comment;
+      }
+    },
     selectComment(comment) {
-      this.selectedComment = comment;
+      return this.selectedComment === comment;
+    },
+    deleteComment(comment) {
+      const index = this.comments.findIndex((c) => c.id === comment.id);
+      if (index !== -1) {
+        this.comments.splice(index, 1);
+        this.selectedComment = null;
+      }
     },
     disablePreviousDate(ts) {
-      if (this.pickerDisable.reprogDate) return ts >= Date.now();
+      if (!this.pickerDisable.effectiveDate) return ts > Date.now();
+      if (
+        this.timelineDisabledData.actionEff &&
+        this.timelineDisabledData.deployEff &&
+        this.timelineDisabledData.validationEff
+      )
+        return ts < Date.now();
+      else return ts > Date.now();
     },
     disablePastDates(ts) {
       return ts < Date.now();
@@ -1052,8 +1071,7 @@ export default {
       this.showBoxCompliance = true;
     },
     saveAudit() {
-      if (this.masterPlan) this.auditDialog["mpDate"] = this.pickerDate;
-      else this.auditDialog["reprogDate"] = this.pickerDate;
+      if (this.pickerDate) this.auditDialog["prevDate"] = this.pickerDate;
       this.audits.push(this.auditDialog);
       this.auditDialog = {};
       this.showBoxAudit = false;
@@ -1263,6 +1281,8 @@ export default {
         this.iconReport.icon = "check-decagram-outline";
         this.stepper = 2;
         this.reportFinished = true;
+        this.showBoxReportDate = false;
+      } else if (action === "send") {
         this.showBoxReportDate = true;
       } else {
         this.showBoxEditReport = true;
@@ -1399,7 +1419,7 @@ export default {
 
 .end__card__save {
   background-color: #212b59;
-  margin-top: 1rem;
+  margin-top: 0.3rem;
 }
 .title__report {
   text-transform: uppercase;
@@ -1438,16 +1458,17 @@ export default {
 #fixed-div {
   position: fixed;
   bottom: 0;
-  width: 28vw;
+  width: 38vw;
   padding: 10px;
   box-sizing: border-box;
   background-color: #fff;
 }
 
-#comments-container {
+#comments__container {
   max-height: calc(100vh - 180px);
   overflow-y: auto;
   padding: 10px;
   box-sizing: border-box;
+  position: relative;
 }
 </style>
