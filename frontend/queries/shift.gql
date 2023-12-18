@@ -1,0 +1,6 @@
+query queryShift {
+  shifts {
+    description
+    id
+  }
+}

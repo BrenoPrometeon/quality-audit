@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date
 
 from sqlmodel import Field
 
@@ -6,13 +6,11 @@ from graphemy import MyModel, dl, get_one
 
 
 class Date(MyModel, table=True):
-    _default_mutation = _delete_mutation = True
+    _default_mutation = True
     id: int = Field(primary_key=True)
-    master_plan: date | None
-    forescast: date | None
+    forescast: date
     effective: date | None
-    created_by: str
-    created_at: datetime
+    reason: str | None
 
     @dl("DateUpdates")
     async def date_updates(self, info, parameters):

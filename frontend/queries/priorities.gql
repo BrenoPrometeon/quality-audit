@@ -1,0 +1,6 @@
+query queryPriority {
+  prioritiess{
+    description
+    id
+  }
+}

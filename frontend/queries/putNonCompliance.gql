@@ -1,6 +1,6 @@
-mutation MyMutation ($actionPlan:[Int], $auditId:[Int!], $createdAt:[DateTime!], $createdBy:[String!], $deployment:[Int], $description:[String!], $evidence:[Bool], $id:[Int!], $modifiedAt:[DateTime], modifiedBy:[String], $priorityId:[Int!], $statusId:[Int], $validation:[Int] ) {
+mutation mutationNonCompliance ($actionPlan:[Int], $auditId:[Int!], $deployment:[Int], $description:[String!], $id:[Int!],  $priorityId:[Int!], $validation:[Int] ) {
   putNoncompliance(
-    params: {actionPlan: $actionPlan, auditId: $auditId, createdAt: $createdAt, createdBy: $createdBy, deployment: $deployment, description: $description, evidence: $evidence, id: $id, modifiedAt: $modifiedAt, modifiedBy: $modifiedBy, priorityId: $priorityId, statusId: $statusId, validation: $validation}
+    params: {actionPlan: $actionPlan, auditId: $auditId, deployment: $deployment, description: $description, id: $id, priorityId: $priorityId, validation: $validation}
   ) {
     id
   }

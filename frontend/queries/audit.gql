@@ -1,12 +1,8 @@
-query MyQuery {
+query queryAudit {
   audits {
-    createdBy
-    endDate
+    dateId
     id
-    createdAt
-    modifiedAt
-    modifiedBy
     processId
-    reportDate
+    reportDateId
   }
 }

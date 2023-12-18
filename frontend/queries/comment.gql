@@ -1,8 +1,6 @@
-query MyQuery {
+query queryComment {
   comments {
     comment
-    createdAt
-    createdBy
     id
     nonComplianceId
   }

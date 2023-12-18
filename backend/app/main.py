@@ -6,6 +6,7 @@ from sqlmodel import Session, create_engine
 from .dependencies import settings
 
 from graphemy import MyGraphQLRouter, MyModel
+from fastapi.middleware.cors import CORSMiddleware
 
 engine = create_engine(settings.database_url)
 
@@ -29,6 +30,13 @@ graphql_app = MyGraphQLRouter(
     folder="./app/models",
 )
 app.include_router(graphql_app, prefix="/graphql")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 MyModel.metadata.create_all(engine)
 

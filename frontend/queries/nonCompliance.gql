@@ -1,17 +1,11 @@
-query MyQuery {
+query queryNonCompliance {
   noncompliances {
     actionPlan
     auditId
-    createdAt
-    createdBy
     deployment
     description
-    evidence
     id
-    modifiedAt
-    modifiedBy
     priorityId
-    statusId
     validation
   }
 }

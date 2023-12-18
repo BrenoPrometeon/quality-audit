@@ -1,6 +1,6 @@
-mutation MyMutation($id:[Int!], $createdBy:[String!], $createdAt:[DateTime!], $endDate:[Int!], $processId:[Int!], $reportDate:[Int!], $modified_by:[String], $modified_at:[DateTime]) {
+mutation mutationAudit($id:Int, $dateId:Int, $processId:Int!, $reportDateId:Int) {
   putAudit(
-    params: {id: $id, createdBy: $createdBy, createdAt: $createdAt, endDate: $endDate,  processId: $processId, reportDate: $reportDate, modified_by: $modified_by, modified_at: $modified_at}
+    params: {id: $id, dateId: $dateId,  processId: $processId, reportDateId: $reportDateId}
   ) {
     id
   }

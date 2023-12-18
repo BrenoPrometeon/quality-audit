@@ -1,9 +1,9 @@
 from sqlmodel import Field
 
-from graphemy import MyModel, get_one, dl
+from graphemy import MyModel, get_list, dl
 
 
-class Process(MyModel, table=True):
+class Shift(MyModel, table=True):
     _default_mutation = True
     id: int = Field(primary_key=True)
     description: str
@@ -13,5 +13,5 @@ class Process(MyModel, table=True):
         return await info.context["dl_audit_process"].load(self.id, parameters)
 
 
-async def dl_process(keys: list[tuple]) -> Process.schema:
-    return await get_one(Process, keys)
+async def dl_shifts(keys: list[tuple]) -> list[Shift.schema]:
+    return await get_list(Shift, keys)

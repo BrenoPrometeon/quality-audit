@@ -1,0 +1,6 @@
+query queryProcess {
+  processs {
+    description
+    id
+  }
+}

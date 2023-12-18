@@ -1,0 +1,8 @@
+query queryDateUpdate {
+  dateupdatess {
+    reason
+    newDate
+    id
+    dateId
+  }
+}

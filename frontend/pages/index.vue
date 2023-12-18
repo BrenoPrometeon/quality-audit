@@ -1,1 +1,3 @@
-<template>GRAFICOS...</template>
+<template>
+Teste
+</template>

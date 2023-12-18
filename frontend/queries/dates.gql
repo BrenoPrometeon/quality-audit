@@ -1,0 +1,8 @@
+query queryDate {
+  dates {
+    effective
+    forescast
+    id
+    reason
+  }
+}
