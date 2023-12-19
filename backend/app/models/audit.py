@@ -7,7 +7,7 @@ class Audit(MyModel, table=True):
     _default_mutation = True
     id: int = Field(primary_key=True)
     process_id: int
-    date_id: int | None
+    date_id: int
     report_date_id: int | None
 
     @dl("Process", False)
@@ -23,7 +23,7 @@ class Audit(MyModel, table=True):
         return await info.context["dl_date"].load(self.date_id, parameters)
 
     @dl("Date", False)
-    async def date_report(self, info, parameters):
+    async def report_date(self, info, parameters):
         return await info.context["dl_date"].load(self.report_date_id, parameters)
 
 

@@ -4,8 +4,17 @@
       <v-card-title class="text-center"> {{ i.title }} </v-card-title>
       <v-divider class="mx-6"></v-divider>
       <v-row justify="center"
+        ><v-col class="text-center text-h6 my-3">{{ obj[i.value] }}</v-col></v-row
+      >
+    </div>
+    <div class="box" v-if="obj.dateUpdates.length > 0">
+      <v-card-title class="text-center"> {{ items[1].title }} </v-card-title>
+      <v-divider class="mx-6"></v-divider>
+      <v-row justify="center"
         ><v-col class="text-center text-h6 my-3">{{
-          obj[i.value]
+          obj.dataUpdates.reduce((prev, current) => {
+            return prev && prev.id > current.id ? prev : current;
+          })
         }}</v-col></v-row
       >
     </div>
@@ -15,12 +24,7 @@
         ><v-btn color="reprog" class="mt-2 mx-2" @click="boxReprog = true">
           Reprogramar
         </v-btn>
-        <v-btn
-          color="success"
-          width="120"
-          class="mt-2 mx-2"
-          @click="boxSave = true"
-        >
+        <v-btn color="success" width="120" class="mt-2 mx-2" @click="boxSave = true">
           Concluir
         </v-btn></v-col
       ></v-row
@@ -30,7 +34,7 @@
   <!-- ALTERAÇÃO DO PRAZO MÁXIMO PARA ENVIO DO RELATÓRIO E AUDITORIA -->
   <v-dialog v-model="boxReprog" persistent max-width="600">
     <v-card>
-      <v-card-title class="text-center">{{}}</v-card-title>
+      <v-card-title class="text-center"></v-card-title>
       <v-card-text>
         <v-row justify="center" no-gutters
           ><v-col cols="auto" class="text-center">
@@ -80,9 +84,7 @@
               v-model:formatted-value="dateReport"
               class="text-center date__picker" /></v-col
           ><v-col cols="auto" class="text-center"
-            ><v-card-title class="text-center text-h5">{{
-              obj.customField
-            }}</v-card-title>
+            ><v-card-title class="text-center text-h5"></v-card-title>
             <v-divider></v-divider>
             <n-date-picker
               panel
@@ -105,33 +107,36 @@
   </v-dialog>
 </template>
 <script>
-import queryPriority from "~/queries/priorities.gql";
+import queryDate from "~/queries/dates.gql";
+import queryDateUpdate from "~/queries/dateUpdates.gql";
 import mutationDateUpdate from "~/queries/putDateUpdates.gql";
 
 export default {
   props: {
     obj: {
-      required: false,
-      default: { prev: "22/10/2023", eff: "22/10/2023" },
+      required: true,
     },
+    customField: { required: true },
   },
   data: () => ({
     boxSave: false,
     boxReprog: false,
+    dates: {},
+    dateUpdates: {},
     dateReport: null,
     reasonEditReport: null,
     items: [
       {
         title: "Previsto",
-        value: "prev",
+        value: "forecast",
       },
       {
         title: "Reprogramado",
-        value: "reprog",
+        value: "newDate",
       },
       {
         title: "Efetivo",
-        value: "eff",
+        value: "effective",
       },
     ],
   }),
@@ -139,17 +144,17 @@ export default {
     disableDate(ts) {
       return ts < Date.now();
     },
-    teste() {
-      // useAsyncQuery(queryPriority, {id:1}).then(({data})=>{
-      //   console.log(data)
-      // })
-      const { mutate: mutation } = useMutation(mutationDateUpdate);
-      mutation({
-        reason: "Testando",
-        newDate: "2023-10-22",
-        dateId: 1,
-      }).then((response) => console.log("Hello"));
+    loadDates() {
+      useAsyncQuery(queryDate).then(({ data }) => {
+        this.dates = data.value.dates;
+      });
+      useAsyncQuery(queryDateUpdate).then(({ data }) => {
+        this.dateUpdates = data.value.dates;
+      });
     },
+  },
+  created() {
+    this.loadDates();
   },
 };
 </script>
@@ -157,6 +162,10 @@ export default {
 .box {
   font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
     "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
+}
+
+.date__picker {
+  border: 1px solid #000;
 }
 .end__card__save {
   background-color: #212b59;

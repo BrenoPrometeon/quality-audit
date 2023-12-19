@@ -1,8 +1,27 @@
 query queryAudit {
   audits {
-    dateId
     id
-    processId
-    reportDateId
+    dateEnd {
+      effective
+      forecast
+      reason
+      dateUpdates {
+        reason
+        newDate
+      }
+      id
+    }
+    process {
+      description
+    }
+    reportDate {
+      reason
+      effective
+      forecast
+      dateUpdates {
+        newDate
+        reason
+      }
+    }
   }
 }
