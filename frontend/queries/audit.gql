@@ -8,6 +8,7 @@ query queryAudit {
       dateUpdates {
         reason
         newDate
+        id
       }
       id
     }

@@ -1,16 +1,7 @@
-# mutation mutationAudit($id:Int, $dateId:Int!, $processId:Int!, $reportDateId:Int) {
-#   putAudit(
-#     params: {id: $id, dateId: $dateId,  processId: $processId, reportDateId: $reportDateId}
-#   ) {
-#     id
-#   }
-# }
-
-mutation addAudit ($processId:Int!, $shifts: [Int!]!, $forecast: Date!) {
-  addAudit(shifts: $shifts, processId: $processId, forecast: $forecast) {
-    dateId
+mutation mutationAudit($id:Int, $dateId:Int!, $processId:Int!, $reportDateId:Int) {
+  putAudit(
+    params: {id: $id, dateId: $dateId,  processId: $processId, reportDateId: $reportDateId}
+  ) {
     id
-    processId
-    reportDateId
   }
 }

@@ -2,7 +2,6 @@
   <v-card>
     <div class="d-flex flex-row">
       <!-- TABS LATERAIS -->
-
       <v-tabs v-model="audit" color="primary" direction="vertical">
         <p class="text-center text-overline ma-2 audit__p">Auditorias</p>
         <v-divider class="mx-4"></v-divider>
@@ -64,12 +63,9 @@
         <v-card-text>
           <!-- DATA PREVISTA -->
 
-          <v-row justify="center" class="my-3"
+          <v-row justify="center" class="mb-3"
             ><v-col cols="6">
-              <q-date-picker
-                :obj="audit.dateEnd"
-                customField="reportDateId"
-              ></q-date-picker>
+              <q-date-picker :obj="audit.dateEnd" customField="Relatório"></q-date-picker>
             </v-col>
 
             <v-divider></v-divider>
@@ -95,11 +91,11 @@
                 data-aos="fade-up"
                 data-aos-duration="800"
                 justify="space-around"
-                class="ma-3"
+                class="ma-3 align-center"
                 ><v-col cols="5" class="text-center text-h6"
                   ><v-progress-circular
-                    size="200"
-                    width="23"
+                    size="250"
+                    width="25"
                     :model-value="reportFinished ? 100 : daysRemaining * 10"
                     color="green-darken-4"
                     :bg-color="
@@ -112,7 +108,7 @@
                         : '#000'
                     "
                   >
-                    <v-row v-if="audit.effectiveDate"
+                    <v-row v-if="audit.reportDate"
                       ><v-col class="progress"
                         ><div v-if="reportFinished">Concluído</div>
                         <div v-else-if="daysRemaining >= 0">
@@ -128,45 +124,11 @@
                   </v-progress-circular> </v-col
                 ><v-divider :thickness="3" vertical></v-divider
                 ><v-col cols="5">
-                  <v-row justify="center">
-                    <v-col cols="12" class="text-center"
-                      ><n-statistic
-                        label="Previsão máxima para entrega"
-                        :value="dateReport"
-                        class="text-center my-6"
-                      >
-                        <template #prefix
-                          ><v-icon v-if="!dateReport" icon="mdi-calendar-alert"></v-icon>
-                        </template> </n-statistic
-                    ></v-col>
-                    <v-col cols="12" class="pa-0 text-center"
-                      ><v-icon
-                        size="large"
-                        :icon="`mdi-${iconReport.icon}`"
-                        :color="iconReport.color"
-                      ></v-icon
-                    ></v-col>
-                    <v-col v-if="stepper < 2" cols="12" class="text-center"
-                      ><v-btn
-                        :disabled="!dateReport"
-                        color="#b55921"
-                        class="mr-3"
-                        @click="reportSubmitted('reprog')"
-                        >Reprogramar</v-btn
-                      ><v-btn
-                        color="green"
-                        :disabled="!this.audit.effectiveDate || this.reportFinished"
-                        @click="reportSubmitted('send')"
-                        >Entregar</v-btn
-                      ></v-col
-                    ><v-col v-else cols="12" class="text-center"
-                      ><n-statistic
-                        label="Data final da entrega"
-                        :value="dateReportReceive"
-                        class="text-center my-6"
-                      >
-                      </n-statistic></v-col></v-row></v-col
-              ></v-row>
+                  <q-date-picker
+                    :obj="audit.reportDate ? audit.reportDate : null"
+                  ></q-date-picker>
+                </v-col>
+              </v-row>
 
               <!-- STATUS NAO CONFORMIDADES -->
               <div v-if="tabAuditView == 1" data-aos="fade-up" data-aos-duration="800">
@@ -356,7 +318,6 @@
       </n-card>
     </n-modal>
   </v-card>
-  {{ auditDialog }}
 </template>
 <script>
 import queryProcess from "~/queries/process.gql";
@@ -364,7 +325,7 @@ import queryShift from "~/queries/shift.gql";
 import queryAudit from "~/queries/audit.gql";
 import queryDate from "~/queries/dates.gql";
 
-import addAudit from "~/queries/putAudit.gql";
+import addAudit from "~/queries/addAudit.gql";
 
 import AOS from "aos";
 import "aos/dist/aos.css";
@@ -475,21 +436,28 @@ export default {
         this.shifts = data.value.shifts;
       });
     },
-    OpenBoxCompliance() {
-      this.showBoxCompliance = true;
-    },
     saveAudit() {
-      const { mutate: mutation } = useMutation(addAudit);
+      const { mutate: mutation } = useMutation(addAudit, {
+        refetchQueries: [{ query: queryAudit }],
+      });
       mutation({
         forecast: this.auditDialog.date,
         shifts: this.auditDialog.shift_id,
         processId: this.auditDialog.process_id,
       }).then(({ data }) => {
         message.info("Auditoria Criada!");
-        this.audits = [...this.audits, data.addAudit];
+        this.loadAudit();
       });
       this.auditDialog = {};
       this.showBoxAudit = false;
+    },
+    loadAudit() {
+      const { result } = useQuery(queryAudit);
+      setTimeout(() => {
+        if (result && result._value && result._value.audits) {
+          this.audits = result._value.audits;
+        }
+      }, 2000);
     },
     reason(action, session) {
       if (action === "cancel") {
@@ -511,168 +479,21 @@ export default {
         this.showReason = !this.showReason;
       }
     },
-    newCompliance() {
-      var id = this.dataCompliance.length + 1;
-      if (id < 10) {
-        id = `0${id}`;
-      }
-      var pt =
-        this.complianceDialog.priority === 1
-          ? "Minor"
-          : this.complianceDialog.priority === 2
-          ? "Major"
-          : "Ofi";
-
-      function obterDataHojeFormatada() {
-        const data = new Date();
-
-        const dia = adicionarZero(data.getDate());
-        const mes = adicionarZero(data.getMonth() + 1); // Meses começam do zero
-        const ano = data.getFullYear();
-
-        const formatadaComum = `${dia}/${mes}/${ano}`;
-        const formatadaName = `${ano}${dia}${mes}`;
-
-        return [formatadaComum, formatadaName];
-      }
-
-      function adicionarZero(numero) {
-        return numero < 10 ? `0${numero}` : numero;
-      }
-
-      function somarDias(dataString, days) {
-        const [dia, mes, ano] = dataString.split("/");
-
-        const data = new Date(`${ano}-${mes}-${dia}`);
-
-        data.setDate(data.getDate() + days);
-
-        const diaNovo = String(data.getDate()).padStart(2, "0");
-        const mesNovo = String(data.getMonth() + 1).padStart(2, "0");
-        const anoNovo = data.getFullYear();
-
-        const novaDataString = `${diaNovo}/${mesNovo}/${anoNovo}`;
-
-        return novaDataString;
-      }
-
-      const dataFormatada = obterDataHojeFormatada();
-
-      var name = `${dataFormatada[1]}#${id}${pt}`;
-      this.complianceDialog["id"] = id;
-      this.complianceDialog["name"] = name;
-
-      if (this.complianceDialog.priority === 2)
-        this.complianceDialog["actionPlan"] = somarDias(this.dateReportReceive, 20);
-      else this.complianceDialog["actionPlan"] = somarDias(this.dateReportReceive, 60);
-
-      this.dataCompliance.push(this.complianceDialog);
-      this.showBoxCompliance = false;
-      this.complianceDialog = {
-        id: null,
-        priority: null,
-        description: null,
-        name: null,
-      };
-    },
     countdown(data) {
-      const dataString = data;
-
-      function converterStringParaData(dataString) {
-        const partesData = dataString.split("/");
-
-        return new Date(partesData[2], partesData[1] - 1, partesData[0]);
-      }
-
-      const dataOriginal = converterStringParaData(dataString);
-
-      const dataCom10Dias = new Date(dataOriginal);
-      dataCom10Dias.setDate(dataOriginal.getDate());
+      const partesData = data.split("-");
+      const dataOriginal = new Date(partesData[0], partesData[1] - 1, partesData[2]);
 
       const dataAtual = new Date();
 
-      const diferencaEmMilissegundos = dataCom10Dias - dataAtual;
+      const diferencaEmMilissegundos = dataOriginal - dataAtual;
+
       const diferencaEmDias = Math.ceil(diferencaEmMilissegundos / (1000 * 60 * 60 * 24));
+
       return diferencaEmDias;
-    },
-    alternableBtnAudit(button) {
-      if (button === "reprogram") {
-        this.pickerDisable.reprogDate = !this.pickerDisable.reprogDate;
-        this.secondReason = "audit";
-        this.showReason = !this.showReason;
-      } else {
-        this.btnSaveAudit = !this.btnSaveAudit;
-      }
-      if (button === "finishAudit")
-        this.pickerDisable.effectiveDate = !this.pickerDisable.effectiveDate;
-
-      if (button != "cancel" && button != "save") {
-        this.btnSaveAuditDict["call"] = button;
-      }
-
-      if (button === "save") {
-        if (this.btnSaveAuditDict.call === "reprogram") {
-          this.audit = { ...this.audit, ...this.auditDates };
-          this.pickerDisable.reprogDate = true;
-        } else {
-          this.pickerDisable.effectiveDate = true;
-          this.showBoxReport = true;
-        }
-      }
-
-      if (button === "cancel") {
-        this.pickerDisable.effectiveDate = true;
-        this.pickerDisable.reprogDate = true;
-
-        this.auditDates.effectiveDate = null;
-        if (this.audit.reprogDate) {
-          this.auditDates.reprogDate = this.audit.reprogDate;
-        } else this.auditDates.reprogDate = null;
-      }
-    },
-    alternableBtnCompliance(button, position, cancel = ["Reprog", "Eff"]) {
-      var saveFieldCompliance = null;
-      if (button === "Reprog" || button === "Eff") {
-        this.btnSaveComplianceDict["call"] = button;
-        this.btnSaveComplianceDict["field"] = position + button;
-      }
-      if (this.stepCompliance == 0) saveFieldCompliance = "actionPlan";
-      else if (this.stepCompliance == 1) saveFieldCompliance = "deployment";
-      else if (this.stepCompliance == 2) saveFieldCompliance = "validation";
-
-      var date = this.btnSaveComplianceDict.field;
-      var disable = position + button;
-
-      this.timelineDisabledData[disable] = !this.timelineDisabledData[disable];
-
-      if (button === "Reprog") {
-        this.secondReason = "compliance";
-        this.showReason = true;
-        this.dataUpdates.reason = null;
-      }
-      if (button === "Save") {
-        if (this.btnSaveComplianceDict["call"] == "Reprog")
-          this.dataUpdates.newDate = this.complianceDates[date];
-        if (this.btnSaveComplianceDict["call"] == "Eff") {
-          this.dataCompliance[this.rowCompliance - 1][
-            saveFieldCompliance
-          ] = this.complianceDates[date];
-          this.stepCompliance++;
-        }
-
-        this.timelineDisabledData[position + cancel[0]] = true;
-        this.timelineDisabledData[position + cancel[1]] = true;
-      }
-      if (button === "Cancel") {
-        this.timelineDisabledData[position + cancel[0]] = true;
-        this.timelineDisabledData[position + cancel[1]] = true;
-      }
-      this.btnSaveCompliance = !this.btnSaveCompliance;
     },
     finishAudit(step) {
       if (step === "audit") {
         this.audit = { ...this.audit, ...this.auditDates };
-        this.daysRemaining = this.countdown(this.dateReport);
         this.iconReport.icon = "clock-time-eight-outline";
         this.iconReport.color = "black";
         this.stepper = 1;
@@ -721,9 +542,6 @@ export default {
       useAsyncQuery(queryProcess).then(({ data }) => {
         this.areas = data.value.processs;
       });
-      useAsyncQuery(queryAudit).then(({ data }) => {
-        this.audits = data.value.audits;
-      });
       useAsyncQuery(queryDate).then(({ data }) => {
         this.dates = data.value.dates;
       });
@@ -732,6 +550,7 @@ export default {
 
   created() {
     this.loadAll();
+    this.loadAudit();
   },
   computed: {},
 
@@ -741,31 +560,9 @@ export default {
     },
     audit: {
       handler(newAudit, oldAudit) {
-        for (const key in newAudit) {
-          if (newAudit[key] !== oldAudit[key]) {
-            if (key === "name") {
-              this.clear();
-
-              if (this.audit.reprogDate)
-                this.auditDates = { reprogDate: this.audit.reprogDate };
-              else this.auditDates = { reprogDate: null };
-
-              if (this.audit.effectiveDate) {
-                this.auditDates = { effectiveDate: this.audit.effectiveDate };
-                this.daysRemaining = this.countdown(this.audit.effectiveDate);
-                if (this.reportFinished) {
-                  this.iconReport.icon = "check-decagram-outline";
-                  this.iconReport.color = "green";
-                } else {
-                  this.iconReport.icon = "clock-time-eight-outline";
-                  this.iconReport.color = "black";
-                }
-              } else {
-                this.auditDates.effectiveDate = null;
-                this.iconReport.icon = "";
-              }
-            }
-          }
+        console.log(newAudit);
+        if (newAudit.dateEnd.effective) {
+          this.daysRemaining = this.countdown(newAudit.dateEnd.effective);
         }
       },
       deep: true,

@@ -1,0 +1,27 @@
+mutation addAudit ($processId:Int!, $shifts: [Int!]!, $forecast: Date!) {
+  addAudit(shifts: $shifts, processId: $processId, forecast: $forecast) {
+    id
+    process {
+      description
+    }
+    reportDate {
+      reason
+      effective
+      forecast
+      dateUpdates {
+        newDate
+        reason
+      }
+    }
+    dateEnd {
+      effective
+      forecast
+      reason
+      dateUpdates {
+        reason
+        newDate
+      }
+      id
+    }
+  }
+}
