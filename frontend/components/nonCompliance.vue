@@ -1,6 +1,6 @@
 <template>
   <!-- STATUS NAO CONFORMIDADES -->
-  <div v-if="tabAuditView == 1" data-aos="fade-up" data-aos-duration="800">
+  <div data-aos="fade-up" data-aos-duration="800">
     <!-- NEW BUTTON -->
     <v-row justify="center" class="ma-1"
       ><v-col class="text-end"
@@ -111,10 +111,6 @@
 <script>
 export default {
   props: {
-    tabAuditView: {
-      type: Number,
-      required: true,
-    },
     reportFinished: {
       type: Boolean,
       required: true,

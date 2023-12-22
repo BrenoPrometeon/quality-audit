@@ -33,11 +33,59 @@
 
     <!-- BUTTONS -->
     <v-row justify="center" v-if="!obj.effective"
-      ><v-col cols="12" class="text-center"
-        ><v-btn color="reprog" class="mt-2 mx-2" @click="boxReprog = true">
-          Reprogramar
-        </v-btn>
-        <v-btn color="success" width="120" class="mt-2 mx-2" @click="boxSave = true">
+      ><v-col cols="12" class="text-center">
+        <!-- ALTERAÇÃO DO PRAZO MÁXIMO PARA ENVIO DO RELATÓRIO E AUDITORIA -->
+        <v-dialog persistent max-width="600">
+          <template v-slot:activator="{ props }">
+            <v-btn color="reprog" class="mt-2 mx-2" v-bind="props">
+              Reprogramar
+            </v-btn>
+          </template>
+          <template v-slot:default="{ isActive }">
+            <v-card>
+              <v-card-title class="text-center"></v-card-title>
+              <v-card-text>
+                <v-row justify="center" no-gutters
+                  ><v-col cols="auto" class="text-center">
+                    <n-date-picker
+                      panel
+                      clearable
+                      type="date"
+                      format="dd/MM/yyyy"
+                      :is-date-disabled="disableDate"
+                      value-format="yyyy-MM-dd"
+                      v-model:formatted-value="dateReprog.newDate"
+                      class="text-center date__picker" /></v-col
+                  ><v-col cols="11" class="text-center"
+                    ><p class="text-overline">Motivo do Reajuste</p>
+                    <v-text-field
+                      variant="outlined"
+                      label="Descreva o porquê necessita de reajuste"
+                      v-model="dateReprog.reason"
+                    ></v-text-field></v-col
+                ></v-row>
+              </v-card-text>
+              <!-- SAVE BUTTON -->
+              <v-card-actions class="end__card__save">
+                <v-row justify="end" class="mx-3"
+                  >
+                  <v-btn color="red" @click="isActive.value = false"
+                        >Cancelar</v-btn
+                      ><v-btn color="white" @click="reprogDate"
+                    >Salvar</v-btn
+                  ></v-row
+                >
+              </v-card-actions>
+            </v-card>
+          </template>
+        </v-dialog>
+
+        <v-btn
+          color="success"
+          width="120"
+          class="mt-2 mx-2"
+          @click="boxSave = true"
+        >
           Concluir
         </v-btn></v-col
       ></v-row
@@ -46,40 +94,6 @@
   <div v-else class="text-center">
     <img src="../no_data.jpg" width="200" alt="Sem dados" />
   </div>
-
-  <!-- ALTERAÇÃO DO PRAZO MÁXIMO PARA ENVIO DO RELATÓRIO E AUDITORIA -->
-  <v-dialog v-model="boxReprog" persistent max-width="600">
-    <v-card>
-      <v-card-title class="text-center"></v-card-title>
-      <v-card-text>
-        <v-row justify="center" no-gutters
-          ><v-col cols="auto" class="text-center">
-            <n-date-picker
-              panel
-              clearable
-              type="date"
-              format="dd/MM/yyyy"
-              :is-date-disabled="disableDate"
-              value-format="yyyy-MM-dd"
-              v-model:formatted-value="dateReprog.newDate"
-              class="text-center date__picker" /></v-col
-          ><v-col cols="11" class="text-center"
-            ><p class="text-overline">Motivo do Reajuste</p>
-            <v-text-field
-              variant="outlined"
-              label="Descreva o porquê necessita de reajuste"
-              v-model="dateReprog.reason"
-            ></v-text-field></v-col
-        ></v-row>
-      </v-card-text>
-      <!-- SAVE BUTTON -->
-      <v-card-actions class="end__card__save">
-        <v-row justify="end" class="mx-3"
-          ><v-btn color="white" @click="saveReprog()">Salvar</v-btn></v-row
-        >
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
 
   <!-- CAIXA DE CONCLUSÃO -->
   <v-dialog v-model="boxSave" persistent max-width="600">
@@ -119,7 +133,9 @@
               v-model="dateSave.reason"
             ></v-text-field> </v-col
           ><v-col cols="auto" class="text-center"
-            ><v-card-title class="text-center text-h5">{{ customField }}</v-card-title>
+            ><v-card-title class="text-center text-h5">{{
+              customField
+            }}</v-card-title>
             <p v-if="customField == 'Relatório' && dateSave.effectiveDate">
               Escolha uma data acrescidos <br />
               10 dias úteis apartir de
@@ -142,28 +158,42 @@
         <v-row justify="end" class="mx-3"
           ><v-btn color="white" @click="saveEffective('save')">Salvar</v-btn>
           <v-btn color="red" @click="saveEffective('cancel')">Cancelar</v-btn>
-          </v-row
-        >
+        </v-row>
       </v-card-actions>
     </v-card>
   </v-dialog>
 </template>
+
+<script setup>
+const props = defineProps({
+  obj: { required: true },
+  customField: {required: false}
+});
+const dateReprog = ref({ });
+const {
+  mutate: reprogDate,
+  loading,
+  onDone,
+} = useMutation(mutationDateUpdate, {
+  refetchQueries: [{ query: queryAudit }],
+  variables: dateReprog.value,
+});
+onDone((data) => {
+  message.info("Auditoria Criada!");
+});
+</script>
+
 <script>
 import mutationDateUpdate from "~/queries/putDateUpdates.gql";
 import mutationDate from "~/queries/putDate.gql";
 
+import queryAudit from "~/queries/audit.gql";
+
 export default {
-  props: {
-    obj: {
-      required: false,
-    },
-    customField: { required: false },
-  },
   data: () => ({
     boxSave: false,
     boxReprog: false,
     dateUpdates: [],
-    dateReprog: {},
     dateSave: {},
     items: [
       {
@@ -199,10 +229,14 @@ export default {
     formatDate(dateString) {
       const dateObject = dateString ? new Date(dateString) : null;
 
-      return dateObject ? this.$options.filters.dateFormat(dateObject, "dd-MM-yyyy") : "";
+      return dateObject
+        ? this.$options.filters.dateFormat(dateObject, "dd-MM-yyyy")
+        : "";
     },
     saveReprog() {
-      const { mutate: mutation } = useMutation(mutationDateUpdate);
+      const { mutate: mutation } = useMutation(mutationDateUpdate, {
+        refetchQueries: [{ query: queryAudit }],
+      });
       mutation({
         dateId: this.obj.id,
         newDate: this.dateReprog.newDate,
@@ -215,24 +249,23 @@ export default {
       this.boxReprog = false;
     },
     saveEffective(action) {
-      if(action === 'save'){
-      const { mutate: mutation } = useMutation(mutationDate);
-      mutation({
-        id: this.obj.id,
-        effective: this.dateSave.effectiveDate,
-        forecast: this.obj.forecast,
-        reason: this.dateSave.reason,
-      }).then(({ data }) => {
-        message.info("Data Efetiva Inserida!");
+      if (action === "save") {
+        const { mutate: mutation } = useMutation(mutationDate);
+        mutation({
+          id: this.obj.id,
+          effective: this.dateSave.effectiveDate,
+          forecast: this.obj.forecast,
+          reason: this.dateSave.reason,
+        }).then(({ data }) => {
+          message.info("Data Efetiva Inserida!");
+          this.dateSave = {};
+        });
+        this.boxSave = false;
+      } else {
+        this.boxSave = false;
         this.dateSave = {};
-      });
-      this.boxSave = false;
-    }
-    else {
-      this.boxSave = false;
-      this.dateSave = {};
-    }
-  }
+      }
+    },
   },
   filters: {
     dateFormat(date, format) {
@@ -247,7 +280,6 @@ export default {
       return `${formattedDay}/${formattedMonth}/${year}`;
     },
   },
-  created() {},
   watch: {
     obj: {
       handler(newValue, oldValue) {
