@@ -8,7 +8,7 @@ from graphemy import MyModel, dl, get_one
 class Date(MyModel, table=True):
     _default_mutation = True
     id: int = Field(primary_key=True)
-    forecast: date
+    forecast: date | None
     effective: date | None
     reason: str | None
 

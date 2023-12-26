@@ -1,4 +1,4 @@
-mutation mutationDate($id:Int, $effective:Date, $forecast:Date!, $reason:String) {
+mutation mutationDate($id:Int, $effective:Date, $forecast:Date, $reason:String) {
   putDate(
     params: {id: $id, forecast: $forecast, effective: $effective, reason: $reason }
   ) {

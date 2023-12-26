@@ -1,38 +1,38 @@
 <template>
-  <div class="ma-3" v-if="obj">
+  <div class="ma-3" v-if="children">
     <!-- FORECAST -->
-    <div class="box" v-if="obj.forecast">
+    <div class="box" v-if="children.forecast">
       <v-card-title class="text-center"> {{ items[0].title }} </v-card-title>
       <v-divider class="mx-6"></v-divider>
       <v-row justify="center"
         ><v-col class="text-center text-h6 my-3">{{
-          formatDate(obj.forecast)
+          formatDate(children.forecast)
         }}</v-col></v-row
       >
     </div>
     <!-- REPROGRAM -->
-    <div class="box" v-if="dateUpdates.length > 0">
+    <div class="box" v-if="children.dateUpdates.length > 0">
       <v-card-title class="text-center"> {{ items[1].title }} </v-card-title>
       <v-divider class="mx-6"></v-divider>
       <v-row justify="center"
         ><v-col class="text-center text-h6 my-3">
-          {{ formatDate(getMaxIdObject(dateUpdates).newDate) }}
+          {{ formatDate(getMaxIdObject(children.dateUpdates).newDate) }}
         </v-col></v-row
       >
     </div>
     <!-- EFFECTIVE -->
-    <div class="box" v-if="obj.effective">
+    <div class="box" v-if="children.effective">
       <v-card-title class="text-center"> {{ items[2].title }} </v-card-title>
       <v-divider class="mx-6"></v-divider>
       <v-row justify="center"
         ><v-col class="text-center text-h6 my-3">{{
-          formatDate(obj.effective)
+          formatDate(children.effective)
         }}</v-col></v-row
       >
     </div>
 
     <!-- BUTTONS -->
-    <v-row justify="center" v-if="!obj.effective"
+    <v-row justify="center" v-if="!children.effective"
       ><v-col cols="12" class="text-center">
         <!-- ALTERAÇÃO DO PRAZO MÁXIMO PARA ENVIO DO RELATÓRIO E AUDITORIA -->
         <v-dialog persistent max-width="600">
@@ -67,11 +67,15 @@
               </v-card-text>
               <!-- SAVE BUTTON -->
               <v-card-actions class="end__card__save">
-                <v-row justify="end" class="mx-3"
-                  >
+                <v-row justify="end" class="mx-3">
                   <v-btn color="red" @click="isActive.value = false"
-                        >Cancelar</v-btn
-                      ><v-btn color="white" @click="reprogDate"
+                    >Cancelar</v-btn
+                  ><v-btn
+                    color="white"
+                    @click="
+                      reprogDate();
+                      isActive.value = false;
+                    "
                     >Salvar</v-btn
                   ></v-row
                 >
@@ -80,121 +84,177 @@
           </template>
         </v-dialog>
 
-        <v-btn
-          color="success"
-          width="120"
-          class="mt-2 mx-2"
-          @click="boxSave = true"
-        >
-          Concluir
-        </v-btn></v-col
-      ></v-row
+        <!-- CAIXA DE CONCLUSÃO -->
+        <v-dialog persistent max-width="600">
+          <template v-slot:activator="{ props }">
+            <v-btn color="success" width="120" class="mt-2 mx-2" v-bind="props">
+              Concluir
+            </v-btn>
+          </template>
+          <template v-slot:default="{ isActive }">
+            <v-card>
+              {{new Date(children.forecast)}}{{ new Date() }}
+              <v-card-title class="text-center text-h5 mt-3"
+                >Data Efetiva</v-card-title
+              >
+
+              <v-card-text>
+                <v-row justify="center" no-gutters
+                  ><v-col cols="auto" class="text-center">
+                    <v-divider></v-divider>
+                    <n-date-picker
+                      panel
+                      type="date"
+                      clearable
+                      format="dd/MM/yyyy"
+                      :is-date-disabled="disablePastDate"
+                      value-format="yyyy-MM-dd"
+                      v-model:formatted-value="dateEffective.effective"
+                      class="text-center date__picker"
+                  /></v-col>
+                  <v-col
+                    cols="12"
+                    class="text-center"
+                    v-if="
+                      children.dateUpdates
+                        ? new Date(getMaxIdObject(children.dateUpdates).newDate) <
+                          new Date()
+                        : new Date(children.forecast) < new Date()
+                    "
+                    ><p class="text-overline">Motivo do Atraso</p>
+                    <v-text-field
+                      variant="outlined"
+                      label="Descreva o porquê houve atraso"
+                      v-model="dateEffective.reason"
+                    ></v-text-field> </v-col
+                  ><v-col cols="auto" class="text-center"
+                    ><v-card-title class="text-center text-h5">{{
+                      customField.title
+                    }}</v-card-title>
+                    <p v-if="customField.title == 'Relatório'">
+                      Escolha uma data acrescidos <br />
+                      10 dias úteis apartir de
+                      {{ formatDate(dateEffective.effective) }}
+                    </p>
+                    <v-divider></v-divider>
+                    <n-date-picker
+                      panel
+                      type="date"
+                      clearable
+                      format="dd/MM/yyyy"
+                      :is-date-disabled="disableDate"
+                      value-format="yyyy-MM-dd"
+                      v-model:formatted-value="dateCustom.forecast"
+                      class="text-center date__picker" /></v-col
+                ></v-row>
+              </v-card-text>
+              <!-- SAVE BUTTON -->
+              <v-card-actions class="end__card__save">
+                <v-row justify="end" class="mx-3">
+                  <v-btn color="red" @click="isActive.value = false"
+                    >Cancelar</v-btn
+                  >
+                  <v-btn
+                    color="white"
+                    @click="
+                      effectiveDate();
+                      isActive.value = false;
+                      customField.value ? newDate() : null;
+                    "
+                    >Salvar</v-btn
+                  >
+                </v-row>
+              </v-card-actions>
+            </v-card>
+          </template>
+        </v-dialog>
+      </v-col></v-row
     >
   </div>
   <div v-else class="text-center">
     <img src="../no_data.jpg" width="200" alt="Sem dados" />
   </div>
-
-  <!-- CAIXA DE CONCLUSÃO -->
-  <v-dialog v-model="boxSave" persistent max-width="600">
-    <v-card>
-      <v-card-title class="text-center text-h5 mt-3">Data Efetiva</v-card-title>
-
-      <v-card-text>
-        <v-row justify="center"
-          ><v-col cols="auto" class="text-center">
-            <v-divider></v-divider>
-            <n-date-picker
-              panel
-              type="date"
-              clearable
-              format="dd/MM/yyyy"
-              :is-date-disabled="disablePastDate"
-              value-format="yyyy-MM-dd"
-              v-model:formatted-value="dateSave.effectiveDate"
-              class="text-center date__picker"
-          /></v-col>
-          <v-col
-            cols="12"
-            class="text-center"
-            v-if="
-              obj.dateUpdates
-                ? getMaxIdObject(obj.dateUpdates).newDate < new Date()
-                  ? true
-                  : obj.forecast < new Date()
-                  ? true
-                  : false
-                : false
-            "
-            ><p class="text-overline">Motivo do Atraso</p>
-            <v-text-field
-              variant="outlined"
-              label="Descreva o porquê houve atraso"
-              v-model="dateSave.reason"
-            ></v-text-field> </v-col
-          ><v-col cols="auto" class="text-center"
-            ><v-card-title class="text-center text-h5">{{
-              customField
-            }}</v-card-title>
-            <p v-if="customField == 'Relatório' && dateSave.effectiveDate">
-              Escolha uma data acrescidos <br />
-              10 dias úteis apartir de
-              {{ formatDate(dateSave.effectiveDate) }}
-            </p>
-            <v-divider></v-divider>
-            <n-date-picker
-              panel
-              type="date"
-              clearable
-              format="dd/MM/yyyy"
-              :is-date-disabled="disableDate"
-              value-format="yyyy-MM-dd"
-              v-model:formatted-value="dateSave.customDate"
-              class="text-center date__picker" /></v-col
-        ></v-row>
-      </v-card-text>
-      <!-- SAVE BUTTON -->
-      <v-card-actions class="end__card__save">
-        <v-row justify="end" class="mx-3"
-          ><v-btn color="white" @click="saveEffective('save')">Salvar</v-btn>
-          <v-btn color="red" @click="saveEffective('cancel')">Cancelar</v-btn>
-        </v-row>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
 </template>
 
 <script setup>
 const props = defineProps({
-  obj: { required: true },
-  customField: {required: false}
+  session: { required: true },
+  father: { required: true },
+  children: { required: true },
+  customField: { required: false },
 });
-const dateReprog = ref({ });
+
+const dateReprog = ref({});
+const dateEffective = ref({});
+const dateCustom = ref({});
+
+// FUNÇÃO PARA REPROGRAMAÇÃO
 const {
   mutate: reprogDate,
-  loading,
-  onDone,
+  loading: reprogLoading,
+  onDone: reprogOnDone,
 } = useMutation(mutationDateUpdate, {
   refetchQueries: [{ query: queryAudit }],
   variables: dateReprog.value,
 });
-onDone((data) => {
-  message.info("Auditoria Criada!");
+reprogOnDone((data) => {
+  message.info("Reprogramação concluída!");
 });
+
+// FUNÇÃO PARA DATA EFETIVA
+const {
+  mutate: effectiveDate,
+  loading: effectiveLoading,
+  onDone: effectiveOnDone,
+} = useMutation(mutationDate, {
+  refetchQueries: [{ query: queryAudit }],
+  variables: dateEffective.value,
+});
+effectiveOnDone((data) => {
+  message.info("Data Efetiva inserida com sucesso!");
+});
+
+// FUNÇÃO PARA CRIAR A DATA DO PRÓXIMO CAMPO
+const {
+  mutate: newDate,
+  loading: newDateLoading,
+  onDone: newDateOnDone,
+} = useMutation(mutationDate, {
+  variables: dateCustom.value,
+});
+newDateOnDone((data) => {
+  console.log(data);
+  useMutation(mutationAudit, {
+    refetchQueries: [{ query: queryAudit }],
+    variables: {
+      [props.customField.value]: data,
+      id: props.father.id,
+    },
+  });
+  console.log("AAAAAAAAAAAAAAAAA");
+});
+
+watch(
+  () => props.children,
+  (newValue, oldValue) => {
+    if (newValue && newValue.id && newValue.forecast) {
+      dateEffective.value.id = dateReprog.value.dateId = newValue.id;
+      dateEffective.value.forecast = newValue.forecast;
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <script>
 import mutationDateUpdate from "~/queries/putDateUpdates.gql";
 import mutationDate from "~/queries/putDate.gql";
+import mutationAudit from "~/queries/putAudit.gql";
 
 import queryAudit from "~/queries/audit.gql";
 
 export default {
   data: () => ({
-    boxSave: false,
-    boxReprog: false,
-    dateUpdates: [],
-    dateSave: {},
     items: [
       {
         title: "Previsto",
@@ -227,50 +287,21 @@ export default {
       );
     },
     formatDate(dateString) {
-      const dateObject = dateString ? new Date(dateString) : null;
+      const dateObject = dateString
+        ? new Date(dateString + "T00:00:00Z")
+        : null;
 
       return dateObject
-        ? this.$options.filters.dateFormat(dateObject, "dd-MM-yyyy")
+        ? this.$options.filters.dateFormat(
+            new Date(dateObject.setDate(dateObject.getDate() + 1)),
+            "dd-MM-yyyy"
+          )
         : "";
-    },
-    saveReprog() {
-      const { mutate: mutation } = useMutation(mutationDateUpdate, {
-        refetchQueries: [{ query: queryAudit }],
-      });
-      mutation({
-        dateId: this.obj.id,
-        newDate: this.dateReprog.newDate,
-        reason: this.dateReprog.reason,
-      }).then(({ data }) => {
-        message.info("Data Reprogramada!");
-        this.dateUpdates = [...this.dateUpdates, this.dateReprog];
-        this.dateReprog = {};
-      });
-      this.boxReprog = false;
-    },
-    saveEffective(action) {
-      if (action === "save") {
-        const { mutate: mutation } = useMutation(mutationDate);
-        mutation({
-          id: this.obj.id,
-          effective: this.dateSave.effectiveDate,
-          forecast: this.obj.forecast,
-          reason: this.dateSave.reason,
-        }).then(({ data }) => {
-          message.info("Data Efetiva Inserida!");
-          this.dateSave = {};
-        });
-        this.boxSave = false;
-      } else {
-        this.boxSave = false;
-        this.dateSave = {};
-      }
     },
   },
   filters: {
     dateFormat(date, format) {
       if (!date) return "";
-
       const day = date.getDate();
       const month = date.getMonth() + 1;
       const year = date.getFullYear();
@@ -278,14 +309,6 @@ export default {
       const formattedMonth = month < 10 ? `0${month}` : `${month}`;
       const formattedDay = day < 10 ? `0${day}` : `${day}`;
       return `${formattedDay}/${formattedMonth}/${year}`;
-    },
-  },
-  watch: {
-    obj: {
-      handler(newValue, oldValue) {
-        if (newValue.dateUpdates) this.dateUpdates = newValue.dateUpdates;
-        else this.dateUpdates = [];
-      },
     },
   },
 };

@@ -19,6 +19,7 @@
             <v-dialog persistent max-width="800">
               <template v-slot:activator="{ props }">
                 <v-btn
+                :loading="auditLoading"
                   variant="text"
                   icon="mdi-plus"
                   class="text-center"
@@ -153,8 +154,10 @@
           <v-row justify="center" class="mb-3"
             ><v-col cols="6">
               <q-date-picker
-                :obj="audit.dateEnd"
-                customField="Relatório"
+              session="audit"
+                :father="audit"
+                :children="audit.dateEnd"
+                :customField="{title:'Relatório', value:'reportDateId'}"
               ></q-date-picker>
             </v-col>
 
@@ -214,7 +217,7 @@
                 ><v-divider :thickness="3" vertical></v-divider
                 ><v-col cols="5">
                   <q-date-picker
-                    :obj="audit.reportDate ? audit.reportDate : null"
+                    session="audit" :father="audit" :children="audit.reportDate ? audit.reportDate : null"
                   ></q-date-picker>
                 </v-col>
               </v-row>
