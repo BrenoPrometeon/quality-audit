@@ -1,5 +1,6 @@
 <template>
   <div class="ma-3" v-if="children">
+  {{ father }}
     <!-- FORECAST -->
     <div class="box" v-if="children.forecast">
       <v-card-title class="text-center"> {{ items[0].title }} </v-card-title>
@@ -93,7 +94,6 @@
           </template>
           <template v-slot:default="{ isActive }">
             <v-card>
-              {{new Date(children.forecast)}}{{ new Date() }}
               <v-card-title class="text-center text-h5 mt-3"
                 >Data Efetiva</v-card-title
               >
@@ -113,25 +113,26 @@
                       class="text-center date__picker"
                   /></v-col>
                   <v-col
-                    cols="12"
+                    cols="10"
                     class="text-center"
                     v-if="
-                      children.dateUpdates
-                        ? new Date(getMaxIdObject(children.dateUpdates).newDate) <
+                      children.dateUpdates.length
+                        ? new Date(`${getMaxIdObject(children.dateUpdates).newDate}T00:00`) <
                           new Date()
-                        : new Date(children.forecast) < new Date()
+                        : new Date(`${children.forecast}T00:00`) < new Date()
                     "
-                    ><p class="text-overline">Motivo do Atraso</p>
+                    >
+                    <p class="text-overline">Motivo do Atraso</p>
                     <v-text-field
                       variant="outlined"
                       label="Descreva o porquê houve atraso"
                       v-model="dateEffective.reason"
-                    ></v-text-field> </v-col
+                    ></v-text-field></v-col
                   ><v-col cols="auto" class="text-center"
                     ><v-card-title class="text-center text-h5">{{
                       customField.title
                     }}</v-card-title>
-                    <p v-if="customField.title == 'Relatório'">
+                    <p v-if="customField.title == 'Relatório' && dateEffective.effective">
                       Escolha uma data acrescidos <br />
                       10 dias úteis apartir de
                       {{ formatDate(dateEffective.effective) }}
@@ -156,6 +157,7 @@
                   >
                   <v-btn
                     color="white"
+                    :disabled="!(customField.value?dateCustom.forecast:dateEffective.effective)"
                     @click="
                       effectiveDate();
                       isActive.value = false;
@@ -187,6 +189,7 @@ const props = defineProps({
 const dateReprog = ref({});
 const dateEffective = ref({});
 const dateCustom = ref({});
+
 
 // FUNÇÃO PARA REPROGRAMAÇÃO
 const {
@@ -222,17 +225,30 @@ const {
 } = useMutation(mutationDate, {
   variables: dateCustom.value,
 });
-newDateOnDone((data) => {
-  console.log(data);
-  useMutation(mutationAudit, {
-    refetchQueries: [{ query: queryAudit }],
-    variables: {
-      [props.customField.value]: data,
-      id: props.father.id,
-    },
+
+
+newDateOnDone(({data}) => {
+  var compliance = gql` mutation myMutation { putNonCompliance(params: {id: "${props.father.id}", props.customField.value: "${data.putDate.id}"}) {
+          id
+        }}`;
+  const { mutate: mutationFatherAudit } = useMutation(mutationAudit, {
+        refetchQueries: [{ query: queryAudit }],
+        variables: {
+          [props.customField.value]: data.putDate.id,
+          id: props.father.id
+        },
   });
-  console.log("AAAAAAAAAAAAAAAAA");
+  const { mutate: mutationFatherCompliance } = useMutation(compliance, {
+        refetchQueries: [{ query: queryAudit }],
+        variables: {
+          [props.customField.value]: data.putDate.id,
+          id: props.father.id
+        },
+  });
+  if(props.customField.value == 'audit') mutationFatherAudit();
+  else mutationFatherCompliance()
 });
+
 
 watch(
   () => props.children,
@@ -250,8 +266,11 @@ watch(
 import mutationDateUpdate from "~/queries/putDateUpdates.gql";
 import mutationDate from "~/queries/putDate.gql";
 import mutationAudit from "~/queries/putAudit.gql";
+import mutationNonCompliance from "~/queries/putNonCompliance.gql";
 
 import queryAudit from "~/queries/audit.gql";
+import queryNonCompliance from "~/queries/nonCompliance.gql";
+
 
 export default {
   data: () => ({
@@ -271,20 +290,20 @@ export default {
     ],
   }),
   methods: {
+    getMaxIdObject(dateUpdate){
+        if (!dateUpdate || dateUpdate.length === 0) {
+          return { newDate: null };
+        }
+  
+        return dateUpdate.reduce((prev, current) =>
+          prev.id > current.id ? prev : current
+        );
+  },
     disableDate(ts) {
       return ts < Date.now();
     },
     disablePastDate(ts) {
       return ts > Date.now();
-    },
-    getMaxIdObject(dateUpdate) {
-      if (!dateUpdate || dateUpdate.length === 0) {
-        return { newDate: null };
-      }
-
-      return dateUpdate.reduce((prev, current) =>
-        prev.id > current.id ? prev : current
-      );
     },
     formatDate(dateString) {
       const dateObject = dateString

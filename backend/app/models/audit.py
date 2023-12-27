@@ -6,8 +6,8 @@ from graphemy import MyModel, dl, get_one, get_list
 class Audit(MyModel, table=True):
     _default_mutation = True
     id: int = Field(primary_key=True)
-    process_id: int
-    date_id: int
+    process_id: int | None
+    date_id: int | None
     report_date_id: int | None
 
     @dl("Process", False)

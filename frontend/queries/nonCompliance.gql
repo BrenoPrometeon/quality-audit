@@ -1,11 +1,20 @@
 query queryNonCompliance {
-  noncompliances {
-    actionPlan
-    auditId
-    deployment
+noncompliances {
     description
     id
-    priorityId
+    priority {
+      description
+      id
+    }
+    deployment
+    actionPlan
+    auditId
     validation
+    comments {
+      comment
+      createdAt
+      createdBy
+      id
+    }
   }
 }

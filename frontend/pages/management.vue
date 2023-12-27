@@ -11,7 +11,7 @@
           :value="n"
           :style="{ 'max-width': '15vw' }"
         >
-          {{ n.process.description }}
+          {{ n.process?.description }}
         </v-tab>
         <v-row justify="center"
           ><v-col class="text-center">
