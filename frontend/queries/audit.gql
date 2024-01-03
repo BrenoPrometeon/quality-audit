@@ -18,6 +18,7 @@ query queryAudit {
     }
     reportDate {
       reason
+      id
       effective
       forecast
       dateUpdates {

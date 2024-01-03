@@ -1,6 +1,5 @@
 <template>
   <div class="ma-3" v-if="children">
-  {{ father }}
     <!-- FORECAST -->
     <div class="box" v-if="children.forecast">
       <v-card-title class="text-center"> {{ items[0].title }} </v-card-title>
@@ -35,6 +34,7 @@
     <!-- BUTTONS -->
     <v-row justify="center" v-if="!children.effective"
       ><v-col cols="12" class="text-center">
+
         <!-- ALTERAÇÃO DO PRAZO MÁXIMO PARA ENVIO DO RELATÓRIO E AUDITORIA -->
         <v-dialog persistent max-width="600">
           <template v-slot:activator="{ props }">
@@ -60,6 +60,7 @@
                   ><v-col cols="11" class="text-center"
                     ><p class="text-overline">Motivo do Reajuste</p>
                     <v-text-field
+                    :disabled="!dateReprog.newDate"
                       variant="outlined"
                       label="Descreva o porquê necessita de reajuste"
                       v-model="dateReprog.reason"
@@ -72,6 +73,7 @@
                   <v-btn color="red" @click="isActive.value = false"
                     >Cancelar</v-btn
                   ><v-btn
+                    :disabled="!dateReprog.reason"
                     color="white"
                     @click="
                       reprogDate();
@@ -128,7 +130,7 @@
                       label="Descreva o porquê houve atraso"
                       v-model="dateEffective.reason"
                     ></v-text-field></v-col
-                  ><v-col cols="auto" class="text-center"
+                  ><v-col cols="auto" class="text-center" v-if="customField"
                     ><v-card-title class="text-center text-h5">{{
                       customField.title
                     }}</v-card-title>
@@ -157,11 +159,11 @@
                   >
                   <v-btn
                     color="white"
-                    :disabled="!(customField.value?dateCustom.forecast:dateEffective.effective)"
+                    :disabled="!(props.customField?dateCustom.forecast:dateEffective.effective)"
                     @click="
                       effectiveDate();
                       isActive.value = false;
-                      customField.value ? newDate() : null;
+                      customField?.value ? createDate():'';
                     "
                     >Salvar</v-btn
                   >
@@ -185,6 +187,7 @@ const props = defineProps({
   children: { required: true },
   customField: { required: false },
 });
+const emit = defineEmits(['dateCompleted'])
 
 const dateReprog = ref({});
 const dateEffective = ref({});
@@ -215,37 +218,46 @@ const {
 });
 effectiveOnDone((data) => {
   message.info("Data Efetiva inserida com sucesso!");
+  emit('dateCompleted');
 });
 
 // FUNÇÃO PARA CRIAR A DATA DO PRÓXIMO CAMPO
 const {
-  mutate: newDate,
-  loading: newDateLoading,
-  onDone: newDateOnDone,
+  mutate: createDate,
+  loading: createDateLoading,
+  onDone: createDateOnDone,
 } = useMutation(mutationDate, {
   variables: dateCustom.value,
 });
 
 
-newDateOnDone(({data}) => {
-  var compliance = gql` mutation myMutation { putNonCompliance(params: {id: "${props.father.id}", props.customField.value: "${data.putDate.id}"}) {
+createDateOnDone(({data}) => {
+  var field = props.customField?.value;
+  var compliance = gql` mutation myMutation($id: String!, $value: String!) { putNonCompliance(params: {id: "$id", ${field}: "$value"}) {
           id
         }}`;
-  const { mutate: mutationFatherAudit } = useMutation(mutationAudit, {
+
+  const { mutate: mutationFatherAudit, onDone: auditOnDone } = useMutation(mutationAudit, {
         refetchQueries: [{ query: queryAudit }],
         variables: {
-          [props.customField.value]: data.putDate.id,
+          reportDateId: data.putDate.id,
+          dateId:props.father.dateEnd?.id,
+          processId:props.father.process?.id,
           id: props.father.id
         },
   });
+  auditOnDone(({data})=>{
+    emit('dateCompleted');
+  });
+
   const { mutate: mutationFatherCompliance } = useMutation(compliance, {
         refetchQueries: [{ query: queryAudit }],
         variables: {
-          [props.customField.value]: data.putDate.id,
+          value: data.putDate.id,
           id: props.father.id
         },
   });
-  if(props.customField.value == 'audit') mutationFatherAudit();
+  if(props.session == 'audit') mutationFatherAudit();
   else mutationFatherCompliance()
 });
 

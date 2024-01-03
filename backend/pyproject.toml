@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "backend"
+version = "0.1.0"
+description = ""
+authors = ["BrenoPrometeon <breno.soares.st@prometeon.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+gunicorn = "^21.2.0"
+uvicorn = "^0.25.0"
+fastapi = "^0.104.1"
+strawberry-graphql = "^0.211.1"
+python-dotenv = "^1.0.0"
+pydantic = "1.10.13"
+sqlmodel = "^0.0.14"
+greenlet = "^3.0.3"
+SQLAlchemy = "^2.0.24"
+colorlog = "^6.8.0"
+PyJWT = "^2.8.0"
+graphemy = "^0.2.4"
+pyodbc = "^5.0.1"
+
+
+[tool.poetry.group.dev.dependencies]
+pyodbc = "^5.0.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

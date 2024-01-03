@@ -19,7 +19,7 @@
             <v-dialog persistent max-width="800">
               <template v-slot:activator="{ props }">
                 <v-btn
-                :loading="auditLoading"
+                  :loading="auditLoading"
                   variant="text"
                   icon="mdi-plus"
                   class="text-center"
@@ -154,10 +154,11 @@
           <v-row justify="center" class="mb-3"
             ><v-col cols="6">
               <q-date-picker
-              session="audit"
+                @date-completed="refetchAudit()"
+                session="audit"
                 :father="audit"
                 :children="audit.dateEnd"
-                :customField="{title:'Relatório', value:'reportDateId'}"
+                :customField="{ title: 'Relatório', value: 'reportDateId' }"
               ></q-date-picker>
             </v-col>
 
@@ -172,7 +173,7 @@
                 v-for="n in tabContent"
                 :key="n"
                 :value="n.value"
-                :disabled="n.value == 1"
+                :disabled="n.value == 1 && !audit.reportDate?.effective"
               >
                 {{ n.name }}
               </v-tab>
@@ -188,21 +189,23 @@
                   ><v-progress-circular
                     size="250"
                     width="25"
-                    :model-value="daysRemaining * 10"
-                    color="green-darken-4"
+                    :model-value="
+                      audit.reportDate?.effective ? 100 : daysRemaining * 10
+                    "
+                    :color="audit.reportDate ? 'green-darken-4' : '#000'"
                     :bg-color="
                       daysRemaining == 0
                         ? 'yellow-accent-4'
                         : daysRemaining < 0
                         ? '#000'
-                        : audit.dateEnd
+                        : audit.reportDate
                         ? 'red-accent-4'
                         : '#000'
                     "
                   >
                     <v-row v-if="audit.reportDate"
                       ><v-col class="progress"
-                        ><div v-if="false">Concluído</div>
+                        ><div v-if="audit.reportDate?.effective">Concluído</div>
                         <div v-else-if="daysRemaining >= 0">
                           Faltam: <br />
                           {{ daysRemaining }} dias
@@ -217,23 +220,25 @@
                 ><v-divider :thickness="3" vertical></v-divider
                 ><v-col cols="5">
                   <q-date-picker
-                    session="audit" :father="audit" :children="audit.reportDate ? audit.reportDate : null"
+                    @date-completed="refetchAudit()"
+                    session="audit"
+                    :father="audit"
+                    :children="audit.reportDate ? audit.reportDate : null"
                   ></q-date-picker>
                 </v-col>
               </v-row>
+            </div>
 
-              <!-- STATUS NAO CONFORMIDADES -->
-              <div
-                v-if="tabAuditView == 1"
-                data-aos="fade-up"
-                data-aos-duration="800"
-              >
-                <nonCompliance
-                  :stepCompliance="stepCompliance"
-                  :reportFinished="audit.reportDate?.effectiveDate"
-                  :dateReportReceive="dateReportReceive"
-                />
-              </div>
+            <!-- STATUS NAO CONFORMIDADES -->
+            <div
+              v-if="tabAuditView == 1"
+              data-aos="fade-up"
+              data-aos-duration="800" 
+              class="ma-3"
+            >
+              <nonCompliance
+                :audit="audit"
+              />
             </div>
           </v-card> </v-card-text
       ></v-card>
@@ -241,7 +246,11 @@
   </v-card>
 </template>
 <script setup>
-const { result: auditsRaw, loading: auditLoading } = useQuery(queryAudit);
+const {
+  result: auditsRaw,
+  loading: auditLoading,
+  refetch: refetchAudit,
+} = useQuery(queryAudit, { pollInterval: 500 });
 const { result: processRaw, loading: processLoading } = useQuery(queryProcess);
 const { result: shiftRaw, loading: shiftLoading } = useQuery(queryShift);
 
@@ -289,68 +298,39 @@ export default {
 
   methods: {
     countdown(data) {
-      const partesData = data.split("-");
-      const dataOriginal = new Date(
-        partesData[0],
-        partesData[1] - 1,
-        partesData[2]
-      );
+      if (data) {
+        const partesData = data.split("-");
+        const dataOriginal = new Date(
+          partesData[0],
+          partesData[1] - 1,
+          partesData[2]
+        );
 
-      const dataAtual = new Date();
+        const dataAtual = new Date();
 
-      const diferencaEmMilissegundos = dataOriginal - dataAtual;
+        const diferencaEmMilissegundos = dataOriginal - dataAtual;
 
-      const diferencaEmDias = Math.ceil(
-        diferencaEmMilissegundos / (1000 * 60 * 60 * 24)
-      );
+        const diferencaEmDias = Math.ceil(
+          diferencaEmMilissegundos / (1000 * 60 * 60 * 24)
+        );
 
-      return diferencaEmDias;
-    },
-    finishAudit(step) {
-      if (step === "audit") {
-        this.iconReport.icon = "clock-time-eight-outline";
-        this.iconReport.color = "black";
-        this.stepper = 1;
-        this.showBoxReport = false;
-      } else {
-        this.showBoxEditReport = false;
-        this.daysRemaining = this.countdown(this.dateReport);
+        return diferencaEmDias;
       }
     },
-    reportSubmitted(action) {
-      if (action === "save") {
-        this.iconReport.color = "green";
-        this.iconReport.icon = "check-decagram-outline";
-        this.stepper = 2;
-        this.showBoxReportDate = false;
-      } else if (action === "send") {
-        this.showBoxReportDate = true;
-      } else {
-        this.showBoxEditReport = true;
+    getMaxIdObject(dateUpdate) {
+      if (!dateUpdate || dateUpdate.length === 0) {
+        return { newDate: null };
       }
+
+      return dateUpdate.reduce((prev, current) =>
+        prev.id > current.id ? prev : current
+      );
     },
-    setDateUpdate(reason, newDate, dateId) {
-      console.log(reason, newDate, dateId);
-    },
-    completedAudit() {
-      this.stepper = 3;
-    },
-    setStep(rowCompliance) {
-      if (this.dataCompliance[rowCompliance - 1].actionPlan)
-        this.stepCompliance = 0;
-      if (this.dataCompliance[rowCompliance - 1].deployment)
-        this.stepCompliance = 1;
-      if (this.dataCompliance[rowCompliance - 1].validation)
-        this.stepCompliance = 2;
-    },
+
     clear() {
       this.daysRemaining = null;
       this.stepper = 0;
-      this.dateReport = null;
-      this.dateReportReceive = null;
-      this.btnSaveAudit = false;
-      this.pickerDisable.effectiveDate = true;
-      this.pickerDisable.reprogDate = true;
+      this.tabAuditView = 0;
     },
   },
   watch: {
@@ -359,28 +339,24 @@ export default {
     },
     audit: {
       handler(newAudit, oldAudit) {
-        if (newAudit.dateEnd.effective) {
-          this.daysRemaining = this.countdown(newAudit.dateEnd.effective);
+        this.clear();
+        let dateCountdown;
+        if (newAudit.reportDate?.forecast) {
+          if (
+            newAudit.reportDate.dateUpdates &&
+            newAudit.reportDate.dateUpdates.length > 0
+          ) {
+            dateCountdown = this.getMaxIdObject(
+              newAudit.reportDate.dateUpdates
+            ).newDate;
+          } else {
+            dateCountdown = newAudit.reportDate.forecast;
+          }
+          this.daysRemaining = this.countdown(dateCountdown);
         }
       },
       deep: true,
     },
-    auditDates() {
-      if (this.auditDates.effectiveDate) {
-        this.stepper = 1;
-      }
-    },
-  },
-  rowCompliance() {
-    if (this.rowCompliance) this.setStep(this.rowCompliance);
-  },
-  complianceDates: {
-    handler(newDict, oldDict) {
-      if (newDict.deployPrev) this.timelineDisabledData.deployPrev = true;
-      if (newDict.validationPrev)
-        this.timelineDisabledData.validationPrev = true;
-    },
-    deep: true,
   },
 };
 </script>

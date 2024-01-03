@@ -6,6 +6,7 @@ from graphemy import MyModel, dl, get_one
 class NonCompliance(MyModel, table=True):
     _default_mutation = True
     id: int = Field(primary_key=True)
+    identifier: str 
     audit_id: int
     description: str
     priority_id: int
