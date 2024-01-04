@@ -1,20 +1,48 @@
-query queryNonCompliance {
-noncompliances {
+query queryNonCompliance($auditId:[Int!]) {
+  noncompliances(filters: {auditId: $auditId}) {
     description
     id
     priority {
       description
       id
     }
-    deployment
-    actionPlan
-    auditId
-    validation
+    identifier
+    dateActionPlan {
+      forecast
+      id
+      effective
+      dateUpdates {
+        id
+        newDate
+        reason
+      }
+    }
     comments {
       comment
       createdAt
       createdBy
       id
+    }
+    auditId
+    dateDeployment {
+      forecast
+      id
+      effective
+      dateUpdates {
+        id
+        newDate
+        reason
+      }
+    }
+    dateValidation {
+      effective
+      forecast
+      id
+      dateUpdates {
+        newDate
+        id
+        reason
+      }
     }
   }
 }

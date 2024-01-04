@@ -7,7 +7,13 @@
         <!-- CAIXA DE CRIAÇÃO DE NÃO CONFORMIDADE -->
         <v-dialog max-width="500">
           <template v-slot:activator="{ props }">
-            <v-btn color="success" width="200" v-bind="props">Novo</v-btn>
+            <v-btn
+              color="success"
+              width="200"
+              v-bind="props"
+              :loading="createDateLoading"
+              >Novo</v-btn
+            >
           </template>
           <template v-slot:default="{ isActive }">
             <v-card>
@@ -18,7 +24,7 @@
                     <div class="text-overline">prioridade</div>
                     <!-- SELECIONAR AREA -->
                     <v-select
-                      v-model="complianceDialog.priority"
+                      v-model="dateNonCompliance.priorityId"
                       :items="prioritiesRaw?.prioritiess"
                       variant="outlined"
                       item-value="id"
@@ -28,7 +34,7 @@
                     <div class="text-overline">descrição</div>
                     <!-- SELECIONAR TURNO -->
                     <v-textarea
-                      v-model="complianceDialog.description"
+                      v-model="dateNonCompliance.description"
                       variant="outlined"
                       placeholder="Descrição da Não Conformidade"
                     ></v-textarea>
@@ -58,16 +64,16 @@
     >
 
     <!-- DATA TABLE AND TIMELINE -->
-    <v-row justify="center"
+    <v-row justify="center" 
       ><v-col class="text-center">
         <!-- DATA TABLE -->
 
         <p-data-table
           :columns="columnsCompliance"
-          :data="nonComplianceRaw?.noncompliances"
+          :data="dataCompliance?.length?dataCompliance:[]"
           :id="['id']"
           :height="false"
-          :loading="nonComplianceLoading"
+          :loading="nonComplianceTable"
           selectable
           v-model="rowCompliance"
         >
@@ -83,17 +89,15 @@
         <v-card-title class="text-center">Descrição</v-card-title>
         <v-row justify="center" class="pa-3"
           ><v-col class="text-center"
-            ><v-divider class="mb-2"></v-divider
-            >{{ dataCompliance[rowCompliance - 1].description }}</v-col
-          ></v-row
-        >
+            ><v-divider class="mb-2"></v-divider>{{dataCompliance[rowCompliance-1]?.description}}</v-col
+        ></v-row>
       </v-card>
 
       <v-timeline align="start" data-aos="fade-up" data-aos-duration="1000">
         <v-timeline-item
           v-for="(item, i) in timelineItems"
           :key="i"
-          :dot-color="i < stepCompliance ? 'green' : prometeon"
+          :dot-color="i < stepCompliance ? 'green' : 'primary'"
           :icon="item.icon"
           fill-dot
         >
@@ -109,7 +113,8 @@
               rounded="0"
               :class="['text-h6', 'timeline', 'text-center', 'pa-2']"
               >{{ item.title }}</v-card
-            ><q-date-picker :obj="obj" />
+            >
+            <q-date-picker session="nonCompliance" :father="father" :children="father?.dateActionPlan"/>
           </v-card>
         </v-timeline-item>
       </v-timeline>
@@ -117,34 +122,137 @@
   </div>
 </template>
 <script setup>
-const { result: nonComplianceRaw, loading: nonComplianceLoading } =
-  useQuery(queryNonCompliance);
+const props = defineProps({
+  audit: { required: true },
+});
+
+const dataCompliance = ref([]);
+const dateNonCompliance = ref({});
+const dateNewField = ref({});
+const rowCompliance = ref(null);
+const father = ref(null);
+const children = ref(null);
+
+const {
+  loading: nonComplianceTable,
+  onResult
+} = useQuery(queryNonCompliance, {
+  variables: {
+    auditId: [11],
+  },
+});
+onResult(({data})=>{
+  const filteredData = data?.noncompliances.filter(item => item.auditId === props.audit?.id);
+  dataCompliance.value = filteredData;
+})
 
 const { result: prioritiesRaw, loading: prioritiesLoading } =
   useQuery(queryPriority);
 
-const props = defineProps({
-  audit: { required: true },
+
+const {
+  mutate: nonComplianceDate,
+  loading: nonComplianceloading,
+  onDone: nonComplianceOnDone,
+} = useMutation(mutationNonCompliance, {
+  refetchQueries: [{ query: queryNonCompliance }],
+  variables: dateNonCompliance.value,
 });
+nonComplianceOnDone(({ data }) => {});
+
+const {
+  mutate: createDate,
+  loading: createDateLoading,
+  onDone: createDateOnDone,
+} = useMutation(mutationDate, {
+  variables: dateNewField.value,
+});
+
+function obterDataHojeFormatada() {
+  const data = new Date();
+  const dia = adicionarZero(data.getDate());
+  const mes = adicionarZero(data.getMonth() + 1);
+  const ano = data.getFullYear();
+  const formatadaComum = `${dia}/${mes}/${ano}`;
+  const formatadaName = `${ano}${dia}${mes}`;
+  return [formatadaComum, formatadaName];
+}
+
+function adicionarZero(numero) {
+  return numero < 10 ? `0${numero}` : numero;
+}
+
+function somarDias(dataString, days) {
+  const data = new Date(dataString);
+  data.setDate(data.getDate() + days);
+  const diaNovo = String(data.getDate()).padStart(2, "0");
+  const mesNovo = String(data.getMonth() + 1).padStart(2, "0");
+  const anoNovo = data.getFullYear();
+  return `${anoNovo}-${mesNovo}-${diaNovo}`;
+}
+
+function newCompliance() {
+  var pt = prioritiesRaw.value?.prioritiess.find(
+    (item) => item.id === dateNonCompliance.value.priorityId
+  ).description;
+
+  const dataFormatada = obterDataHojeFormatada();
+
+  var name = `${dataFormatada[1]}#${props.audit?.id}${pt}`;
+  dateNonCompliance.value["identifier"] = name;
+
+  if (dateNonCompliance.priority === 2)
+    dateNewField.value["forecast"] = somarDias(
+      props.audit.reportDate.effective,
+      20
+    );
+  else
+    dateNewField.value["forecast"] = somarDias(
+      props.audit.reportDate.effective,
+      60
+    );
+
+  createDate();
+  createDateOnDone(({ data }) => {
+    dateNonCompliance.value["actionPlan"] = data.putDate.id;
+    nonComplianceDate();
+  });
+}
+
+watch(
+  () => props.audit,
+  (newValue, oldValue) => {
+    if (newValue && newValue.id && newValue.reportDate) {
+      dateNonCompliance.value.auditId = newValue.id;
+    }
+  },
+  { immediate: true }
+);
+watch(rowCompliance, (newValue, oldValue) => {
+  if (newValue) {
+    const selectedObject = dataCompliance.value.find(item => String(item.id) === String(newValue));
+    father.value = selectedObject
+  }
+});
+
+
+
 </script>
 <script>
 import mutationNonCompliance from "~/queries/putNonCompliance.gql";
+import mutationDateUpdate from "~/queries/putDateUpdates.gql";
+import mutationDate from "~/queries/putDate.gql";
+
 import queryNonCompliance from "~/queries/nonCompliance.gql";
 import queryPriority from "~/queries/priorities.gql";
 
 export default {
   data: () => ({
-    complianceDialog: {},
-    stepCompliance: 1,
-    rowCompliance: null,
+    stepCompliance: 0,
     columnsCompliance: [
       {
         title: "Identificador",
-        key: "name",
-      },
-      {
-        title: "Prioridade",
-        key: "priority",
+        key: "identifier",
       },
       {
         title: "Descrição",
@@ -171,78 +279,7 @@ export default {
       },
     ],
   }),
-  methods: {
-    newCompliance() {
-      var id = this.dataCompliance.length + 1;
-      if (id < 10) {
-        id = `0${id}`;
-      }
-      var pt =
-        this.complianceDialog.priority === 1
-          ? "Minor"
-          : this.complianceDialog.priority === 2
-          ? "Major"
-          : "Ofi";
-
-      function obterDataHojeFormatada() {
-        const data = new Date();
-
-        const dia = adicionarZero(data.getDate());
-        const mes = adicionarZero(data.getMonth() + 1); // Meses começam do zero
-        const ano = data.getFullYear();
-
-        const formatadaComum = `${dia}/${mes}/${ano}`;
-        const formatadaName = `${ano}${dia}${mes}`;
-
-        return [formatadaComum, formatadaName];
-      }
-
-      function adicionarZero(numero) {
-        return numero < 10 ? `0${numero}` : numero;
-      }
-
-      function somarDias(dataString, days) {
-        const [dia, mes, ano] = dataString.split("/");
-
-        const data = new Date(`${ano}-${mes}-${dia}`);
-
-        data.setDate(data.getDate() + days);
-
-        const diaNovo = String(data.getDate()).padStart(2, "0");
-        const mesNovo = String(data.getMonth() + 1).padStart(2, "0");
-        const anoNovo = data.getFullYear();
-
-        const novaDataString = `${diaNovo}/${mesNovo}/${anoNovo}`;
-
-        return novaDataString;
-      }
-
-      const dataFormatada = obterDataHojeFormatada();
-
-      var name = `${dataFormatada[1]}#${id}${pt}`;
-      this.complianceDialog["id"] = id;
-      this.complianceDialog["name"] = name;
-
-      if (this.complianceDialog.priority === 2)
-        this.complianceDialog["actionPlan"] = somarDias(
-          this.dateReportReceive,
-          20
-        );
-      else
-        this.complianceDialog["actionPlan"] = somarDias(
-          this.dateReportReceive,
-          60
-        );
-
-      this.dataCompliance.push(this.complianceDialog);
-      this.complianceDialog = {
-        id: null,
-        priority: null,
-        description: null,
-        name: null,
-      };
-    },
-  },
+  methods: {},
 };
 </script>
 <style scoped>

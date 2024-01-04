@@ -100,7 +100,7 @@ var page = computed(() => {
     return {
       defaultPageSize: 10,
       showSizePicker: true,
-      pageSizes: [10, 25, 50, props.data.length],
+      pageSizes: [10, 25, 50, props.data?.length],
       showQuickJumper: true,
     };
   }
@@ -583,13 +583,13 @@ function processColumns() {
 watch(
   () => props.data,
   (first, second) => {
-    if (first.length > 0) processColumns();
+    if (first?.length > 0) processColumns();
   }
 );
 watch(
   () => props.columns,
   (first, second) => {
-    if (first.length > 0) processColumns();
+    if (first?.length > 0) processColumns();
   }
 );
 </script>

@@ -278,10 +278,8 @@ watch(
 import mutationDateUpdate from "~/queries/putDateUpdates.gql";
 import mutationDate from "~/queries/putDate.gql";
 import mutationAudit from "~/queries/putAudit.gql";
-import mutationNonCompliance from "~/queries/putNonCompliance.gql";
 
 import queryAudit from "~/queries/audit.gql";
-import queryNonCompliance from "~/queries/nonCompliance.gql";
 
 
 export default {
