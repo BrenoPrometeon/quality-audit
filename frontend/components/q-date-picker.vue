@@ -34,7 +34,6 @@
     <!-- BUTTONS -->
     <v-row justify="center" v-if="!children.effective"
       ><v-col cols="12" class="text-center">
-
         <!-- ALTERAÇÃO DO PRAZO MÁXIMO PARA ENVIO DO RELATÓRIO E AUDITORIA -->
         <v-dialog persistent max-width="600">
           <template v-slot:activator="{ props }">
@@ -60,7 +59,7 @@
                   ><v-col cols="11" class="text-center"
                     ><p class="text-overline">Motivo do Reajuste</p>
                     <v-text-field
-                    :disabled="!dateReprog.newDate"
+                      :disabled="!dateReprog.newDate"
                       variant="outlined"
                       label="Descreva o porquê necessita de reajuste"
                       v-model="dateReprog.reason"
@@ -119,22 +118,30 @@
                     class="text-center"
                     v-if="
                       children.dateUpdates.length
-                        ? new Date(`${getMaxIdObject(children.dateUpdates).newDate}T00:00`) <
-                          new Date()
+                        ? new Date(
+                            `${
+                              getMaxIdObject(children.dateUpdates).newDate
+                            }T00:00`
+                          ) < new Date()
                         : new Date(`${children.forecast}T00:00`) < new Date()
                     "
-                    >
+                  >
                     <p class="text-overline">Motivo do Atraso</p>
                     <v-text-field
                       variant="outlined"
                       label="Descreva o porquê houve atraso"
                       v-model="dateEffective.reason"
                     ></v-text-field></v-col
-                  ><v-col cols="auto" class="text-center" v-if="customField"
+                  ><v-col cols="auto" class="text-center" v-if="customField?.title"
                     ><v-card-title class="text-center text-h5">{{
                       customField.title
                     }}</v-card-title>
-                    <p v-if="customField.title == 'Relatório' && dateEffective.effective">
+                    <p
+                      v-if="
+                        customField.title == 'Relatório' &&
+                        dateEffective.effective
+                      "
+                    >
                       Escolha uma data acrescidos <br />
                       10 dias úteis apartir de
                       {{ formatDate(dateEffective.effective) }}
@@ -159,11 +166,15 @@
                   >
                   <v-btn
                     color="white"
-                    :disabled="!(props.customField?dateCustom.forecast:dateEffective.effective)"
+                    :disabled="
+                      !(props.customField?.value
+                        ? dateCustom.forecast
+                        : dateEffective.effective)
+                    "
                     @click="
                       effectiveDate();
                       isActive.value = false;
-                      customField?.value ? createDate():'';
+                      customField?.value ? createDate() : '';
                     "
                     >Salvar</v-btn
                   >
@@ -187,12 +198,11 @@ const props = defineProps({
   children: { required: true },
   customField: { required: false },
 });
-const emit = defineEmits(['dateCompleted'])
+const emit = defineEmits(["dateCompleted", "dateReprogram", "updateCompliance"]);
 
 const dateReprog = ref({});
 const dateEffective = ref({});
 const dateCustom = ref({});
-
 
 // FUNÇÃO PARA REPROGRAMAÇÃO
 const {
@@ -205,6 +215,7 @@ const {
 });
 reprogOnDone((data) => {
   message.info("Reprogramação concluída!");
+  emit("dateReprogram");
 });
 
 // FUNÇÃO PARA DATA EFETIVA
@@ -213,12 +224,12 @@ const {
   loading: effectiveLoading,
   onDone: effectiveOnDone,
 } = useMutation(mutationDate, {
-  refetchQueries: [{ query: queryAudit }],
   variables: dateEffective.value,
 });
 effectiveOnDone((data) => {
   message.info("Data Efetiva inserida com sucesso!");
-  emit('dateCompleted');
+  emit("dateCompleted");
+  emit('updateCompliance')
 });
 
 // FUNÇÃO PARA CRIAR A DATA DO PRÓXIMO CAMPO
@@ -230,37 +241,59 @@ const {
   variables: dateCustom.value,
 });
 
+createDateOnDone(({ data }) => {
+  let mutationVariables = {};
+  let validation = null;
+  let deployment = null;
+  if (props.session === "audit") {
+    mutationVariables = {
+      reportDateId: data.putDate.id,
+      dateId: props.father.dateEnd?.id,
+      processId: props.father.process?.id,
+      id: props.father.id,
+    };
+    
+    const { mutate: mutationFatherAudit, onDone: auditOnDone } = useMutation(
+      mutationAudit,
+      {
+        variables: mutationVariables,
+      }
+    );
 
-createDateOnDone(({data}) => {
-  var field = props.customField?.value;
-  var compliance = gql` mutation myMutation($id: String!, $value: String!) { putNonCompliance(params: {id: "$id", ${field}: "$value"}) {
-          id
-        }}`;
+    mutationFatherAudit();
 
-  const { mutate: mutationFatherAudit, onDone: auditOnDone } = useMutation(mutationAudit, {
-        refetchQueries: [{ query: queryAudit }],
-        variables: {
-          reportDateId: data.putDate.id,
-          dateId:props.father.dateEnd?.id,
-          processId:props.father.process?.id,
-          id: props.father.id
-        },
-  });
-  auditOnDone(({data})=>{
-    emit('dateCompleted');
-  });
+    auditOnDone(({ data }) => {
+      emit("dateCompleted");
+    });
+  } else if (props.session === "nonCompliance") {
+    if (props.customField.value === "validation") {
+      validation = data.putDate.id;
+    } else if (props.customField.value === "deployment") {
+      deployment = data.putDate.id;
+    }
+    mutationVariables = {
+      identifier: props.father?.identifier,
+      actionPlan: props.father?.actionPlan,
+      auditId: props.father?.auditId,
+      description: props.father?.description,
+      id: props.father?.id,
+      priorityId: props.father?.priorityId,
+      validation: props.father?.validation? props.father.validation: validation,
+      deployment: props.father?.deployment? props.father.deployment: deployment,
+    };
+    const { mutate: mutationFatherCompliance, onDone: nonComplianceOnDone } = useMutation(
+      mutationNonCompliance,
+      {
+        variables: mutationVariables,
+      }
+    );
+    mutationFatherCompliance();
+    nonComplianceOnDone(({ data }) => {
+      emit("updateCompliance");
+    });
 
-  const { mutate: mutationFatherCompliance } = useMutation(compliance, {
-        refetchQueries: [{ query: queryAudit }],
-        variables: {
-          value: data.putDate.id,
-          id: props.father.id
-        },
-  });
-  if(props.session == 'audit') mutationFatherAudit();
-  else mutationFatherCompliance()
+  }
 });
-
 
 watch(
   () => props.children,
@@ -272,15 +305,24 @@ watch(
   },
   { immediate: true }
 );
+watch(
+  () => props.father,
+  (newValue, oldValue) => {
+    if (newValue && newValue.id) {
+
+    }
+  },
+  { immediate: true }
+);
 </script>
 
 <script>
 import mutationDateUpdate from "~/queries/putDateUpdates.gql";
+import mutationNonCompliance from "~/queries/putNonCompliance.gql";
 import mutationDate from "~/queries/putDate.gql";
 import mutationAudit from "~/queries/putAudit.gql";
 
 import queryAudit from "~/queries/audit.gql";
-
 
 export default {
   data: () => ({
@@ -300,15 +342,15 @@ export default {
     ],
   }),
   methods: {
-    getMaxIdObject(dateUpdate){
-        if (!dateUpdate || dateUpdate.length === 0) {
-          return { newDate: null };
-        }
-  
-        return dateUpdate.reduce((prev, current) =>
-          prev.id > current.id ? prev : current
-        );
-  },
+    getMaxIdObject(dateUpdate) {
+      if (!dateUpdate || dateUpdate.length === 0) {
+        return { newDate: null };
+      }
+
+      return dateUpdate.reduce((prev, current) =>
+        prev.id > current.id ? prev : current
+      );
+    },
     disableDate(ts) {
       return ts < Date.now();
     },

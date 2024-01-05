@@ -44,5 +44,9 @@ query queryNonCompliance($auditId:[Int!]) {
         reason
       }
     }
+    actionPlan
+    deployment
+    validation
+    priorityId
   }
 }

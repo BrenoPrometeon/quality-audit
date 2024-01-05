@@ -117,6 +117,7 @@
         rounded="0"
         :disabled="!audit.id"
       >
+        {{ audit.id }}
         <!-- STEPS DA SITUAÇÃO ATUAL DA AUDITORIA -->
         <v-stepper rounded="0" :model-value="stepper" flat>
           <v-stepper-header>
@@ -155,6 +156,7 @@
             ><v-col cols="6">
               <q-date-picker
                 @date-completed="refetchAudit()"
+                @date-reprogram="refetchAudit()"
                 session="audit"
                 :father="audit"
                 :children="audit.dateEnd"
@@ -233,12 +235,10 @@
             <div
               v-if="tabAuditView == 1"
               data-aos="fade-up"
-              data-aos-duration="800" 
+              data-aos-duration="800"
               class="ma-3"
             >
-              <nonCompliance
-                :audit="audit"
-              />
+              <nonCompliance :audit="audit" />
             </div>
           </v-card> </v-card-text
       ></v-card>
@@ -250,22 +250,83 @@ const {
   result: auditsRaw,
   loading: auditLoading,
   refetch: refetchAudit,
-} = useQuery(queryAudit, { pollInterval: 500 });
+  onResult,
+} = useQuery(queryAudit);
 const { result: processRaw, loading: processLoading } = useQuery(queryProcess);
 const { result: shiftRaw, loading: shiftLoading } = useQuery(queryShift);
 
+const daysRemaining = ref(null);
+const stepper = ref(0);
+const tabAuditView = ref(0);
 const newAudit = ref({});
+const audit = ref({});
+
 const {
   mutate: insertAudit,
   loading,
   onDone,
 } = useMutation(addAudit, {
-  refetchQueries: [{ query: queryAudit }],
   variables: newAudit.value,
 });
 onDone((data) => {
   message.info("Auditoria Criada!");
+  refetchAudit();
+  newAudit.value = {};
 });
+
+const countdown = (data) => {
+  if (data) {
+    const partesData = data.split("-");
+    const dataOriginal = new Date(
+      partesData[0],
+      partesData[1] - 1,
+      partesData[2]
+    );
+
+    const dataAtual = new Date();
+
+    const diferencaEmMilissegundos = dataOriginal - dataAtual;
+
+    const diferencaEmDias = Math.ceil(
+      diferencaEmMilissegundos / (1000 * 60 * 60 * 24)
+    );
+
+    return diferencaEmDias;
+  }
+};
+
+const getMaxIdObject = (dateUpdate) => {
+  if (!dateUpdate || dateUpdate.length === 0) {
+    return { newDate: null };
+  }
+
+  return dateUpdate.reduce((prev, current) =>
+    prev.id > current.id ? prev : current
+  );
+};
+
+const clear = () => {
+  daysRemaining.value = null;
+  stepper.value = 0;
+  tabAuditView.value = 0;
+};
+
+watch(audit, (newAudit, oldAudit) => {
+  clear();
+  let dateCountdown;
+  if (newAudit.reportDate?.forecast) {
+    if (
+      newAudit.reportDate.dateUpdates &&
+      newAudit.reportDate.dateUpdates.length > 0
+    ) {
+      dateCountdown = getMaxIdObject(newAudit.reportDate.dateUpdates).newDate;
+    } else {
+      dateCountdown = newAudit.reportDate.forecast;
+    }
+    daysRemaining.value = countdown(dateCountdown);
+  }
+}, { deep: true });
+
 </script>
 <script>
 import queryProcess from "~/queries/process.gql";
@@ -280,9 +341,6 @@ AOS.init({ once: true });
 export default {
   setup() {},
   data: () => ({
-    stepper: 0,
-    daysRemaining: null,
-    audit: {},
     tabContent: [
       {
         name: "Relatório",
@@ -295,69 +353,6 @@ export default {
     ],
     tabAuditView: null,
   }),
-
-  methods: {
-    countdown(data) {
-      if (data) {
-        const partesData = data.split("-");
-        const dataOriginal = new Date(
-          partesData[0],
-          partesData[1] - 1,
-          partesData[2]
-        );
-
-        const dataAtual = new Date();
-
-        const diferencaEmMilissegundos = dataOriginal - dataAtual;
-
-        const diferencaEmDias = Math.ceil(
-          diferencaEmMilissegundos / (1000 * 60 * 60 * 24)
-        );
-
-        return diferencaEmDias;
-      }
-    },
-    getMaxIdObject(dateUpdate) {
-      if (!dateUpdate || dateUpdate.length === 0) {
-        return { newDate: null };
-      }
-
-      return dateUpdate.reduce((prev, current) =>
-        prev.id > current.id ? prev : current
-      );
-    },
-
-    clear() {
-      this.daysRemaining = null;
-      this.stepper = 0;
-      this.tabAuditView = 0;
-    },
-  },
-  watch: {
-    audits(val) {
-      this.tab = val - 1;
-    },
-    audit: {
-      handler(newAudit, oldAudit) {
-        this.clear();
-        let dateCountdown;
-        if (newAudit.reportDate?.forecast) {
-          if (
-            newAudit.reportDate.dateUpdates &&
-            newAudit.reportDate.dateUpdates.length > 0
-          ) {
-            dateCountdown = this.getMaxIdObject(
-              newAudit.reportDate.dateUpdates
-            ).newDate;
-          } else {
-            dateCountdown = newAudit.reportDate.forecast;
-          }
-          this.daysRemaining = this.countdown(dateCountdown);
-        }
-      },
-      deep: true,
-    },
-  },
 };
 </script>
 <style scoped>

@@ -64,13 +64,13 @@
     >
 
     <!-- DATA TABLE AND TIMELINE -->
-    <v-row justify="center" 
+    <v-row justify="center"
       ><v-col class="text-center">
         <!-- DATA TABLE -->
 
         <p-data-table
           :columns="columnsCompliance"
-          :data="dataCompliance?.length?dataCompliance:[]"
+          :data="dataCompliance?.length ? dataCompliance : []"
           :id="['id']"
           :height="false"
           :loading="nonComplianceTable"
@@ -89,8 +89,10 @@
         <v-card-title class="text-center">Descrição</v-card-title>
         <v-row justify="center" class="pa-3"
           ><v-col class="text-center"
-            ><v-divider class="mb-2"></v-divider>{{dataCompliance[rowCompliance-1]?.description}}</v-col
-        ></v-row>
+            ><v-divider class="mb-2"></v-divider
+            >{{ dataCompliance[rowCompliance - 1]?.description }}</v-col
+          ></v-row
+        >
       </v-card>
 
       <v-timeline align="start" data-aos="fade-up" data-aos-duration="1000">
@@ -110,11 +112,19 @@
           /></template>
           <v-card elevation="8" :disabled="!(i == stepCompliance)">
             <v-card
+              :loading="nonComplianceTable"
               rounded="0"
               :class="['text-h6', 'timeline', 'text-center', 'pa-2']"
               >{{ item.title }}</v-card
             >
-            <q-date-picker session="nonCompliance" :father="father" :children="father?.dateActionPlan"/>
+            <q-date-picker
+              @update-compliance="refetch()"
+              @date-reprogram="refetch()"
+              session="nonCompliance"
+              :father="father"
+              :children="getNextChildField(i)"
+              :customField="getNextCustomField(i)"
+            />
           </v-card>
         </v-timeline-item>
       </v-timeline>
@@ -131,24 +141,23 @@ const dateNonCompliance = ref({});
 const dateNewField = ref({});
 const rowCompliance = ref(null);
 const father = ref(null);
-const children = ref(null);
+const stepCompliance = ref(0);
 
 const {
   loading: nonComplianceTable,
-  onResult
-} = useQuery(queryNonCompliance, {
-  variables: {
-    auditId: [11],
-  },
-});
-onResult(({data})=>{
-  const filteredData = data?.noncompliances.filter(item => item.auditId === props.audit?.id);
+  onResult,
+  refetch,
+} = useQuery(queryNonCompliance);
+
+onResult(({ data }) => {
+  const filteredData = data?.noncompliances.filter(
+    (item) => item.auditId === props.audit?.id
+  );
   dataCompliance.value = filteredData;
-})
+});
 
 const { result: prioritiesRaw, loading: prioritiesLoading } =
   useQuery(queryPriority);
-
 
 const {
   mutate: nonComplianceDate,
@@ -158,7 +167,7 @@ const {
   refetchQueries: [{ query: queryNonCompliance }],
   variables: dateNonCompliance.value,
 });
-nonComplianceOnDone(({ data }) => {});
+nonComplianceOnDone(({ data }) => {dateNonCompliance.value = {}});
 
 const {
   mutate: createDate,
@@ -167,6 +176,16 @@ const {
 } = useMutation(mutationDate, {
   variables: dateNewField.value,
 });
+
+const getNextChildField = (index) => {
+  const childFields = ['dateActionPlan', 'dateDeployment', 'dateValidation'];
+  return father?.value[childFields[index]] || '';
+};
+
+const getNextCustomField = (index) => {
+  const customFields = [{title:'Implementação',value:'deployment'}, {title:'Verificação de Eficácia',value:'validation'}, {}];
+  return customFields[index];
+};
 
 function obterDataHojeFormatada() {
   const data = new Date();
@@ -219,6 +238,41 @@ function newCompliance() {
   });
 }
 
+function updateFatherFromRowCompliance() {
+  if (rowCompliance.value) {
+    const selectedObject = dataCompliance.value.find(
+      (item) => String(item.id) === String(rowCompliance.value)
+    );
+    father.value = selectedObject;
+  }
+}
+
+watch(
+  () => rowCompliance.value,
+  () => {
+    updateFatherFromRowCompliance();
+  }
+);
+
+watch(
+  () => dataCompliance.value,
+  () => {
+    updateFatherFromRowCompliance();
+  }
+);
+watch(
+  () => father.value,
+  (newValue, oldValue) => {
+    if(newValue.deployment) stepCompliance.value = 1;
+    if(newValue.validation) {
+      stepCompliance.value = 2;
+      if(newValue.dateValidation?.effective){
+        stepCompliance.value = 3;
+      }
+    }
+  }
+);
+
 watch(
   () => props.audit,
   (newValue, oldValue) => {
@@ -228,19 +282,9 @@ watch(
   },
   { immediate: true }
 );
-watch(rowCompliance, (newValue, oldValue) => {
-  if (newValue) {
-    const selectedObject = dataCompliance.value.find(item => String(item.id) === String(newValue));
-    father.value = selectedObject
-  }
-});
-
-
-
 </script>
 <script>
 import mutationNonCompliance from "~/queries/putNonCompliance.gql";
-import mutationDateUpdate from "~/queries/putDateUpdates.gql";
 import mutationDate from "~/queries/putDate.gql";
 
 import queryNonCompliance from "~/queries/nonCompliance.gql";
@@ -248,7 +292,6 @@ import queryPriority from "~/queries/priorities.gql";
 
 export default {
   data: () => ({
-    stepCompliance: 0,
     columnsCompliance: [
       {
         title: "Identificador",
