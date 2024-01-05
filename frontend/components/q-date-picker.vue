@@ -198,7 +198,7 @@ const props = defineProps({
   children: { required: true },
   customField: { required: false },
 });
-const emit = defineEmits(["dateCompleted", "dateReprogram", "updateCompliance"]);
+const emit = defineEmits(["refreshFields"]);
 
 const dateReprog = ref({});
 const dateEffective = ref({});
@@ -215,7 +215,7 @@ const {
 });
 reprogOnDone((data) => {
   message.info("Reprogramação concluída!");
-  emit("dateReprogram");
+  emit("refreshFields");
 });
 
 // FUNÇÃO PARA DATA EFETIVA
@@ -224,12 +224,13 @@ const {
   loading: effectiveLoading,
   onDone: effectiveOnDone,
 } = useMutation(mutationDate, {
+  refetchQueries: [{ query: queryAudit }],
   variables: dateEffective.value,
 });
 effectiveOnDone((data) => {
   message.info("Data Efetiva inserida com sucesso!");
-  emit("dateCompleted");
-  emit('updateCompliance')
+  if(Object.keys(props.customField).length === 0)
+    emit("refreshFields");
 });
 
 // FUNÇÃO PARA CRIAR A DATA DO PRÓXIMO CAMPO
@@ -263,7 +264,7 @@ createDateOnDone(({ data }) => {
     mutationFatherAudit();
 
     auditOnDone(({ data }) => {
-      emit("dateCompleted");
+      emit("refreshFields");
     });
   } else if (props.session === "nonCompliance") {
     if (props.customField.value === "validation") {
@@ -289,7 +290,7 @@ createDateOnDone(({ data }) => {
     );
     mutationFatherCompliance();
     nonComplianceOnDone(({ data }) => {
-      emit("updateCompliance");
+      emit("refreshFields");
     });
 
   }

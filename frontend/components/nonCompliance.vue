@@ -90,7 +90,7 @@
         <v-row justify="center" class="pa-3"
           ><v-col class="text-center"
             ><v-divider class="mb-2"></v-divider
-            >{{ dataCompliance[rowCompliance - 1]?.description }}</v-col
+            >{{ rowCompliance }}</v-col
           ></v-row
         >
       </v-card>
@@ -118,8 +118,7 @@
               >{{ item.title }}</v-card
             >
             <q-date-picker
-              @update-compliance="refetch()"
-              @date-reprogram="refetch()"
+              @refresh-fields="refetch()"
               session="nonCompliance"
               :father="father"
               :children="getNextChildField(i)"
@@ -167,7 +166,6 @@ const {
   refetchQueries: [{ query: queryNonCompliance }],
   variables: dateNonCompliance.value,
 });
-nonComplianceOnDone(({ data }) => {dateNonCompliance.value = {}});
 
 const {
   mutate: createDate,
@@ -263,13 +261,10 @@ watch(
 watch(
   () => father.value,
   (newValue, oldValue) => {
-    if(newValue.deployment) stepCompliance.value = 1;
-    if(newValue.validation) {
-      stepCompliance.value = 2;
-      if(newValue.dateValidation?.effective){
-        stepCompliance.value = 3;
-      }
-    }
+    if(newValue.dateValidation?.effective) stepCompliance.value = 3;
+    else if(newValue.dateDeployment?.effective) stepCompliance.value = 2;
+    else if(newValue.dateActionPlan?.effective) stepCompliance.value = 1;
+    else stepCompliance.value = 0;
   }
 );
 
