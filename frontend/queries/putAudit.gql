@@ -3,5 +3,8 @@ mutation mutationAudit($id:Int, $reportDateId:Int, $processId:Int, $dateId:Int) 
     params: {id: $id, dateId: $dateId, processId: $processId, reportDateId: $reportDateId}
   ) {
     id
+    reportDate {
+      id
+    }
   }
 }

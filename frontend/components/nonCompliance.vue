@@ -17,6 +17,7 @@
           </template>
           <template v-slot:default="{ isActive }">
             <v-card>
+              {{ dateNonCompliance }}
               <v-card-title class="text-center">Não Conformidade</v-card-title>
               <v-card-text>
                 <v-row justify="center" class="text-center">
@@ -163,8 +164,12 @@ const {
   onDone: nonComplianceOnDone,
 } = useMutation(mutationNonCompliance, {
   refetchQueries: [{ query: queryNonCompliance }],
-  variables: dateNonCompliance.value,
+  variables: dateNonCompliance.value
 });
+
+nonComplianceOnDone(({data})=>{
+  message.info('Não conformidade criada!')
+})
 
 const {
   mutate: createDate,
@@ -202,6 +207,7 @@ function adicionarZero(numero) {
   return numero < 10 ? `0${numero}` : numero;
 }
 
+
 function somarDias(dataString, days) {
   const data = new Date(dataString);
   data.setDate(data.getDate() + days);
@@ -212,32 +218,27 @@ function somarDias(dataString, days) {
 }
 
 function newCompliance() {
-  var pt = prioritiesRaw.value?.prioritiess.find(
-    (item) => item.id === dateNonCompliance.value.priorityId
+  let pt = prioritiesRaw.value?.prioritiess.find(
+    item => item.id == dateNonCompliance.value.priorityId
   ).description;
 
   const dataFormatada = obterDataHojeFormatada();
 
-  var name = `${dataFormatada[1]}#${props.audit?.id}${pt}`;
+  let name = `${dataFormatada[1]}#${props.audit?.id}${pt}`;
   dateNonCompliance.value["identifier"] = name;
 
-  if (dateNonCompliance.priority === 2)
-    dateNewField.value["forecast"] = somarDias(
-      props.audit.reportDate.effective,
-      20
-    );
-  else
-    dateNewField.value["forecast"] = somarDias(
-      props.audit.reportDate.effective,
-      60
-    );
-
+  let forecastDays = dateNonCompliance.value.priorityId === 2 ? 20 : 60;
+  dateNewField.value["forecast"] = somarDias(
+    props.audit.reportDate.effective,
+    forecastDays
+  );
+  
   createDate();
-  createDateOnDone(({ data }) => {
-    dateNonCompliance.value["actionPlan"] = data.putDate.id;
-    nonComplianceDate();
-  });
 }
+createDateOnDone(({ data }) => {
+  dateNonCompliance.value["actionPlan"] = data.putDate.id;
+  nonComplianceDate();
+});
 
 function updateFatherFromRowCompliance() {
   if (rowCompliance.value) {

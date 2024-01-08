@@ -117,7 +117,6 @@
         rounded="0"
         :disabled="!auditContent?.id"
       >
-      {{ newAudit }}
         <!-- STEPS DA SITUAÇÃO ATUAL DA AUDITORIA -->
         <v-stepper rounded="0" :model-value="stepper" flat>
           <v-stepper-header>
@@ -224,7 +223,7 @@
                     @refresh-fields="refetchAudit()"
                     session="audit"
                     :father="auditContent"
-                    :children="auditContent?.reportDate ? auditContent?.reportDate : null"
+                    :children="auditContent?.reportDate"
                     :customField="{}"
                   ></q-date-picker>
                 </v-col>

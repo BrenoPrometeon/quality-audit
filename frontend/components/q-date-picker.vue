@@ -216,7 +216,6 @@ const {
 reprogOnDone((data) => {
   message.info("Reprogramação concluída!");
   emit("refreshFields");
-  dateReprog.value = {};
 });
 
 // FUNÇÃO PARA DATA EFETIVA
@@ -230,8 +229,9 @@ const {
 });
 effectiveOnDone((data) => {
   message.info("Data Efetiva inserida com sucesso!");
-  if(Object.keys(props.customField).length === 0) emit("refreshFields");
-  dateEffective.value = {};
+  if(Object.keys(props.customField).length == 0) {
+    emit("refreshFields")
+  };
 });
 
 // FUNÇÃO PARA CRIAR A DATA DO PRÓXIMO CAMPO
@@ -295,6 +295,7 @@ createDateOnDone(({ data }) => {
     });
 
   }
+  
 });
 
 watch(
