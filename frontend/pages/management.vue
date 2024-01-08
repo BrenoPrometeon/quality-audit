@@ -2,13 +2,13 @@
   <v-card>
     <div class="d-flex flex-row">
       <!-- TABS LATERAIS -->
-      <v-tabs v-model="audit" color="primary" direction="vertical">
+      <v-tabs v-model="auditId" color="primary" direction="vertical">
         <p class="text-center text-overline ma-2 audit__p">Auditorias</p>
         <v-divider class="mx-4"></v-divider>
         <v-tab
           v-for="n in auditsRaw?.audits"
           :key="n.id"
-          :value="n"
+          :value="n.id"
           :style="{ 'max-width': '15vw' }"
         >
           {{ n.process?.description }}
@@ -115,9 +115,9 @@
         width="100vw"
         class="card__content"
         rounded="0"
-        :disabled="!audit.id"
+        :disabled="!auditContent?.id"
       >
-        {{ audit.id }}
+      {{ newAudit }}
         <!-- STEPS DA SITUAÇÃO ATUAL DA AUDITORIA -->
         <v-stepper rounded="0" :model-value="stepper" flat>
           <v-stepper-header>
@@ -155,11 +155,10 @@
           <v-row justify="center" class="mb-3"
             ><v-col cols="6">
               <q-date-picker
-                @date-completed="refetchAudit()"
-                @date-reprogram="refetchAudit()"
+                @refresh-fields="refetchAudit()"
                 session="audit"
-                :father="audit"
-                :children="audit.dateEnd"
+                :father="auditContent"
+                :children="auditContent?.dateEnd"
                 :customField="{ title: 'Relatório', value: 'reportDateId' }"
               ></q-date-picker>
             </v-col>
@@ -175,7 +174,7 @@
                 v-for="n in tabContent"
                 :key="n"
                 :value="n.value"
-                :disabled="n.value == 1 && !audit.reportDate?.effective"
+                :disabled="n.value == 1 && !auditContent?.reportDate?.effective"
               >
                 {{ n.name }}
               </v-tab>
@@ -192,22 +191,22 @@
                     size="250"
                     width="25"
                     :model-value="
-                      audit.reportDate?.effective ? 100 : daysRemaining * 10
+                      auditContent?.reportDate?.effective ? 100 : daysRemaining * 10
                     "
-                    :color="audit.reportDate ? 'green-darken-4' : '#000'"
+                    :color="auditContent?.reportDate ? 'green-darken-4' : '#000'"
                     :bg-color="
                       daysRemaining == 0
                         ? 'yellow-accent-4'
                         : daysRemaining < 0
                         ? '#000'
-                        : audit.reportDate
+                        : auditContent?.reportDate
                         ? 'red-accent-4'
                         : '#000'
                     "
                   >
-                    <v-row v-if="audit.reportDate"
+                    <v-row v-if="auditContent?.reportDate"
                       ><v-col class="progress"
-                        ><div v-if="audit.reportDate?.effective">Concluído</div>
+                        ><div v-if="auditContent?.reportDate?.effective">Concluído</div>
                         <div v-else-if="daysRemaining >= 0">
                           Faltam: <br />
                           {{ daysRemaining }} dias
@@ -222,10 +221,11 @@
                 ><v-divider :thickness="3" vertical></v-divider
                 ><v-col cols="5">
                   <q-date-picker
-                    @date-completed="refetchAudit()"
+                    @refresh-fields="refetchAudit()"
                     session="audit"
-                    :father="audit"
-                    :children="audit.reportDate ? audit.reportDate : null"
+                    :father="auditContent"
+                    :children="auditContent?.reportDate ? auditContent?.reportDate : null"
+                    :customField="{}"
                   ></q-date-picker>
                 </v-col>
               </v-row>
@@ -238,7 +238,7 @@
               data-aos-duration="800"
               class="ma-3"
             >
-              <nonCompliance :audit="audit" />
+              <nonCompliance :audit="auditContent" />
             </div>
           </v-card> </v-card-text
       ></v-card>
@@ -256,10 +256,11 @@ const { result: processRaw, loading: processLoading } = useQuery(queryProcess);
 const { result: shiftRaw, loading: shiftLoading } = useQuery(queryShift);
 
 const daysRemaining = ref(null);
-const stepper = ref(0);
+let stepper = ref(0);
 const tabAuditView = ref(0);
 const newAudit = ref({});
-const audit = ref({});
+const auditId = ref(null);
+const auditContent = ref({})
 
 const {
   mutate: insertAudit,
@@ -271,7 +272,6 @@ const {
 onDone((data) => {
   message.info("Auditoria Criada!");
   refetchAudit();
-  newAudit.value = {};
 });
 
 const countdown = (data) => {
@@ -307,26 +307,34 @@ const getMaxIdObject = (dateUpdate) => {
 
 const clear = () => {
   daysRemaining.value = null;
-  stepper.value = 0;
   tabAuditView.value = 0;
 };
 
-watch(audit, (newAudit, oldAudit) => {
+watch(auditsRaw, () => {
+    auditContent.value = auditsRaw?.value.audits.find(item => item.id == auditId.value)
+}, { deep: true });
+
+watch(auditId, (newValue, oldValue) => {
   clear();
-  let dateCountdown;
-  if (newAudit.reportDate?.forecast) {
-    if (
-      newAudit.reportDate.dateUpdates &&
-      newAudit.reportDate.dateUpdates.length > 0
-    ) {
-      dateCountdown = getMaxIdObject(newAudit.reportDate.dateUpdates).newDate;
-    } else {
-      dateCountdown = newAudit.reportDate.forecast;
-    }
-    daysRemaining.value = countdown(dateCountdown);
+  if(auditsRaw && newValue){
+    auditContent.value = auditsRaw?.value.audits.find(item => item.id == auditId.value)
   }
 }, { deep: true });
 
+watch(auditContent, (newValue, oldValue) => {
+  let dateCountdown;
+  if (newValue?.reportDate?.forecast) {
+    if (
+      newValue?.reportDate.dateUpdates &&
+      newValue?.reportDate.dateUpdates.length > 0
+    ) {
+      dateCountdown = getMaxIdObject(newValue?.reportDate.dateUpdates).newDate;
+    } else {
+      dateCountdown = newValue?.reportDate.forecast;
+    }
+    daysRemaining.value = countdown(dateCountdown);
+  }  
+}, { deep: true });
 </script>
 <script>
 import queryProcess from "~/queries/process.gql";

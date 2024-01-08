@@ -89,8 +89,7 @@
         <v-card-title class="text-center">Descrição</v-card-title>
         <v-row justify="center" class="pa-3"
           ><v-col class="text-center"
-            ><v-divider class="mb-2"></v-divider
-            >{{ rowCompliance }}</v-col
+            ><v-divider class="mb-2"></v-divider>{{ dataCompliance?.find(item => item.id == rowCompliance).description }}</v-col
           ></v-row
         >
       </v-card>
@@ -176,12 +175,16 @@ const {
 });
 
 const getNextChildField = (index) => {
-  const childFields = ['dateActionPlan', 'dateDeployment', 'dateValidation'];
-  return father?.value[childFields[index]] || '';
+  const childFields = ["dateActionPlan", "dateDeployment", "dateValidation"];
+  return father?.value[childFields[index]] || "";
 };
 
 const getNextCustomField = (index) => {
-  const customFields = [{title:'Implementação',value:'deployment'}, {title:'Verificação de Eficácia',value:'validation'}, {}];
+  const customFields = [
+    { title: "Implementação", value: "deployment" },
+    { title: "Verificação de Eficácia", value: "validation" },
+    {},
+  ];
   return customFields[index];
 };
 
@@ -261,9 +264,9 @@ watch(
 watch(
   () => father.value,
   (newValue, oldValue) => {
-    if(newValue.dateValidation?.effective) stepCompliance.value = 3;
-    else if(newValue.dateDeployment?.effective) stepCompliance.value = 2;
-    else if(newValue.dateActionPlan?.effective) stepCompliance.value = 1;
+    if (newValue.dateValidation?.effective) stepCompliance.value = 3;
+    else if (newValue.dateDeployment?.effective) stepCompliance.value = 2;
+    else if (newValue.dateActionPlan?.effective) stepCompliance.value = 1;
     else stepCompliance.value = 0;
   }
 );
